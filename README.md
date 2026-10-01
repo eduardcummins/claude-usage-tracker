@@ -23,11 +23,12 @@ Other limits:
 ## What you need
 
 - Node.js 20 or newer. In a terminal, run `node -v`. If that fails, install the LTS build from [https://nodejs.org](https://nodejs.org).
-- On the phone: **Expo Go** (the dashboard) and **ntfy** (alerts when the phone is locked). Both are free.
-  - iPhone: App Store, search for Expo Go and for ntfy.
-  - Android: Play Store, or F-Droid for ntfy. Search for the same names.
+- On the phone: **ntfy** (alerts when the phone is locked). It is free.
+  - iPhone: App Store, search for ntfy.
+  - Android: Play Store, or F-Droid. Search for ntfy.
+- For the dashboard, use either **Expo Go** (free, and the Mac has to be running `npx expo start`) or the installed app from [Install the app on the phone](#install-the-app-on-the-phone).
 
-You do not need a Mac developer account, an Expo account, or a server of your own.
+The Expo Go path does not need an Expo account, an Apple Developer membership, or a server of your own. The installed app has its own accounts. Those are listed in that section, with the prices.
 
 ## 1. On the Mac
 
@@ -123,7 +124,7 @@ If the Mac asks whether to allow incoming connections for Node, allow it.
 
 The first screen asks for the topic. Paste the same topic, then tap **Save and check**.
 
-Expo Go loads the app from your Mac. Leave `npx expo start` running while you want the dashboard. The ntfy alerts keep working after you stop it.
+Expo Go loads the app from your Mac. Leave `npx expo start` running while you want the dashboard. The ntfy alerts keep working after you stop it. The installed app in [Install the app on the phone](#install-the-app-on-the-phone) does not use this server. It reads the same ntfy topic, and it keeps its own reset alarms.
 
 If the phone cannot see the Mac, run `npx expo start --tunnel` instead. That fallback asks for a free Expo account. Same-Wi-Fi does not.
 
@@ -156,6 +157,167 @@ A check you can run without sending anything:
 ```bash
 node helper/cli.js --mock --dry-run
 ```
+
+## Install the app on the phone
+
+This puts **Claude Usage** on the home screen. After that, the phone reads the latest numbers from your ntfy topic on its own. It still schedules the local reset alarms. You can quit `npx expo start`. The helper on the Mac still has to run about every 10 minutes, or the numbers stop updating. The phone app does not talk to the Mac. It talks to ntfy.
+
+Expo Go keeps working. Use it when you want to try a change on the phone before you build again.
+
+The topic stays on the phone. You type it on the first screen. Do not put the topic, or an ntfy token, into `app.json`, `eas.json`, or git. The icon in the project is a placeholder.
+
+### Accounts and what they cost
+
+These are the prices Apple and Expo published for this setup. If a signup page shows a different price, the signup page is the one to follow.
+
+| What you want | Accounts you create | Money |
+| --- | --- | --- |
+| An Android app you install from a link | A free account at [expo.dev/signup](https://expo.dev/signup) | $0. The free plan includes 15 Android builds and 15 iOS builds each calendar month. A free build uses the slow queue, so it can wait. |
+| An iPhone app that stays installed | That same free Expo account, plus the [Apple Developer Program](https://developer.apple.com/programs/enroll/) | Apple charges 99 USD per year. The Expo free plan is enough for these builds. |
+| An iPhone app with no Apple payment | The Apple ID already on the iPhone, and Xcode on the Mac | $0. Apple expires this install after 7 days. Plug the phone in and install again. |
+| Google Play, only if you want it later | A Google Play Console account | 25 USD once. Skip this. The APK installs without it. |
+
+An Expo Starter plan is 19 USD per month. Get it only if the free plan’s 15 builds for that platform are already used this month. One Android install uses one Android build. One iPhone TestFlight upload uses one iOS build.
+
+### Android (install an APK)
+
+The phone needs internet. It does not have to be on the same Wi-Fi as the Mac. You do not need Android Studio, a USB cable, or a Google developer account.
+
+1. Create the free Expo account at [https://expo.dev/signup](https://expo.dev/signup). Use an email you can open. No card.
+
+2. On the Mac, in this project folder:
+
+```bash
+cd mobile
+npm install
+npx eas-cli@latest login
+npm run build:android
+```
+
+`npx eas-cli@latest login` asks for the Expo email and password. `npm run build:android` runs `npx eas-cli@latest build --platform android --profile preview`. That profile is in `mobile/eas.json`. It builds an APK and marks it for internal install, which means a direct download, not the Play Store.
+
+3. The first time, answer the prompts like this:
+
+   - Create an EAS project for this app? **Yes.** The command writes a project id into `mobile/app.json`. That id is not a password. Leave it in the file. Do not paste your ntfy topic into that file.
+   - Generate a new Android keystore? **Yes.** Expo stores the keystore. A later APK can then install on top of this one. You do not create a keystore yourself.
+
+4. Wait for the build. The terminal prints a page on expo.dev. Open it. When the build has finished, that page has a link and a QR code for the APK.
+
+5. On the Android phone, open that link in Chrome, or scan the QR code. Download the file. Android asks before it installs an app that did not come from the Play Store. Allow installs from the browser when it asks. The screen usually says “Install unknown apps” or “Allow from this source”. Then open the downloaded file and install **Claude Usage**.
+
+6. Open the app. Paste the topic from `node helper/cli.js --init`. Tap **Save and check**. Allow notifications.
+
+7. On Android 12 and newer, a reset alarm at an exact time needs “Alarms & reminders” allowed for this app. If a reset time arrives and Claude Usage stays quiet, open Settings → Apps → Claude Usage → Alarms & reminders, and allow it. The ntfy app still alerts when the Mac posts the reset.
+
+To install a newer copy later, add 1 to `android.versionCode` in `mobile/app.json` (it starts at 1), then from `mobile` run `npm run build:android` again and install the new APK over the old one. The saved topic remains if you do not delete the app first.
+
+### iPhone
+
+Apple does not offer a normal website download for an iPhone app. Pick one of the three paths below.
+
+#### A. TestFlight (99 USD a year, stays installed)
+
+This is the paid path with the least fiddling. TestFlight is Apple’s installer. Each upload works for 90 days, then you upload again. You do not register the phone’s hardware id. These steps do not put the app on the public App Store.
+
+1. Enroll in the Apple Developer Program with the Apple ID that is already on the iPhone: [https://developer.apple.com/programs/enroll/](https://developer.apple.com/programs/enroll/). The fee is 99 USD for the year. Apple can take a day or two to approve a new membership. Wait until the account says you are a member.
+
+2. On the iPhone, install **TestFlight** from the App Store.
+
+3. On the Mac, log in to the Expo account from the Android steps (create it first if you skipped Android):
+
+```bash
+cd mobile
+npm install
+npx eas-cli@latest login
+npm run build:ios
+```
+
+`npm run build:ios` runs `npx eas-cli@latest build --platform ios --profile production --auto-submit`. Expo’s servers compile the app and upload it to App Store Connect. This path does not need Xcode.
+
+4. The first time, sign in to Apple when the command asks. Use the Apple ID on the Developer Program membership. Apple may show a verification code on the iPhone. Type that code into the terminal. When it asks to create a distribution certificate, a provisioning profile, or the App Store Connect app, say yes. The project turns off the push-notification setup prompt. If an older prompt still asks to set up push, say no. Locked-phone alerts come from the ntfy app. Reset alarms inside Claude Usage are local alarms on the phone.
+
+5. Wait for the build to finish, then for Apple’s processing email. Processing is often a few minutes.
+
+6. Open [https://appstoreconnect.apple.com](https://appstoreconnect.apple.com), select the app, and open the TestFlight tab. The project already answers Apple’s export question (`usesNonExemptEncryption` is false in `mobile/app.json`, because the app only uses ordinary HTTPS). If Apple still shows missing compliance, choose the answer that the app uses encryption only as part of HTTPS.
+
+7. Under Internal Testing, create a group if you do not already have one, and add the email for your Apple ID. Open the invite on the iPhone. TestFlight installs Claude Usage.
+
+8. Open Claude Usage, paste the topic, and allow notifications.
+
+For a later upload, add 1 to `ios.buildNumber` in `mobile/app.json` (it starts at `"1"`), then run `npm run build:ios` again. App Store Connect rejects an upload that reuses a build number.
+
+#### B. Ad hoc link (same 99 USD a year)
+
+Use this when you want a direct install and you do not want TestFlight. The Apple Developer Program membership is still required. Expo’s cloud build cannot sign an iPhone app for a real device with a free Apple ID.
+
+1. From `mobile`, after `npx eas-cli@latest login`:
+
+```bash
+npx eas-cli@latest device:create
+```
+
+2. On the iPhone, open the link that command prints and install the registration profile. That sends the phone’s device id to your Apple account. On a new or just-renewed membership, Apple can take 24 to 72 hours before that phone can install the app. If the build fails for that reason, wait, then run the build again.
+
+3. Build the installable app:
+
+```bash
+npx eas-cli@latest build --platform ios --profile preview
+```
+
+Sign in to Apple if asked, and let it create the ad hoc profile. Only phones registered before this build can install it.
+
+4. When the build page shows a finished build, open that link on the iPhone and install. If iOS blocks the launch, go to Settings → General → VPN & Device Management and trust the developer certificate.
+
+A second iPhone needs `device:create` again and a new build.
+
+#### C. Free Apple ID, installed from the Mac (expires in 7 days)
+
+This uses Xcode’s free Personal Team. It does not use Expo’s build servers, and it does not need an Expo account. Apple’s published limits for a free account are:
+
+- The install profile expires 7 days after it is created. The app then refuses to open until you install it again from the Mac.
+- Up to 3 apps installed this way on the device, and up to 3 devices.
+- The phone is plugged into the Mac for the install. After that, it reads ntfy on its own until the 7 days run out.
+
+1. On the Mac, install **Xcode** from the App Store. Open Xcode once and wait until it finishes the extra components. The download is large.
+
+2. In Xcode, open Settings (older Xcode calls this Preferences) → Accounts. Click **+**, choose Apple ID, and sign in with the Apple ID on the iPhone. The team line should end with “(Personal Team)”. This screen does not ask for a payment.
+
+3. Plug the iPhone into the Mac with a cable. Unlock the phone. Tap Trust if the phone asks.
+
+4. On the iPhone, open Settings → Privacy & Security → Developer Mode and turn it on. Restart if it asks. Developer Mode is on iOS 16 and newer. Plug the phone in again after the restart.
+
+5. On the Mac, in this project folder:
+
+```bash
+cd mobile
+npm install
+npx expo run:ios --device --configuration Release
+```
+
+6. Choose the plugged-in iPhone, not a simulator. Choose the Personal Team when it asks. The command compiles the app and copies it to the phone, with the JavaScript included. Wait until the install finishes. You can stop the command after that. Leave `npx expo start` stopped. The home-screen app does not need it.
+
+7. If the phone says the app is from an untrusted developer: Settings → General → VPN & Device Management → your Apple ID → Trust.
+
+8. Open Claude Usage, paste the topic, and allow notifications.
+
+If the command cannot find a team, or signing fails:
+
+```bash
+open ios/*.xcworkspace
+```
+
+In Xcode, select the blue project, then the app target, then Signing & Capabilities. Turn on “Automatically manage signing”. Set Team to the Personal Team. Run `npx expo run:ios --device --configuration Release` again.
+
+When the app stops opening after 7 days, plug the phone in and run that same command again. Install over the existing app. If you delete the app first, the saved topic is gone and you paste it again.
+
+The command creates an `ios` folder on the Mac. That folder is listed in `mobile/.gitignore`. Leave it out of git.
+
+### After the app is installed
+
+- The helper on the computer still publishes the topic. Section 1 is unchanged.
+- ntfy on the phone, subscribed to that topic, is still the alert that fires when Claude Usage has not been opened.
+- Type the topic into Claude Usage once. A new install does not copy the topic out of Expo Go.
+- A change to the app’s screens reaches Expo Go while `npx expo start` is running. An installed copy needs a new build before it shows that change.
 
 ## Windows
 
@@ -220,7 +382,13 @@ Tap Refresh. The dashboard reads the `-data` topic. `--test-alert` only writes t
 The Mac may be asleep, the background check may not be installed, or `--init` was not run before `install-mac.sh`. Run `node helper/cli.js` once in a terminal and read the message.
 
 **Expo Go cannot connect.**  
-Same Wi-Fi, Mac firewall allows Node, and `npx expo start` is still running.
+Same Wi-Fi, Mac firewall allows Node, and `npx expo start` is still running. The installed app does not use that connection. It only needs the phone’s internet and the topic.
+
+**Android will not open the APK.**  
+Allow the browser to install unknown apps, then tap the download again. If Android says the package conflicts with an installed copy, add 1 to `android.versionCode` in `mobile/app.json`, build again, and install that APK.
+
+**The iPhone cloud build asks for a paid Apple account.**  
+TestFlight and the ad hoc link both need the Apple Developer Program (99 USD per year). The free install is the Xcode Personal Team path. It expires after 7 days.
 
 ## Tests
 
