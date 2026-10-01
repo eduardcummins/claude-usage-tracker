@@ -25,7 +25,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.SCHEDULE_EXACT_ALARM"]
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -42,6 +44,13 @@
         }
       ],
       "./plugins/without-push-entitlement.js"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7d884e08-5dd3-4caa-aa0c-d426c70ce12e"
+      }
+    },
+    "owner": "edcrypto"
   }
 }
