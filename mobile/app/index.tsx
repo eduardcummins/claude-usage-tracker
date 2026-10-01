@@ -1,110 +1,69 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   AppState,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { notifyLocal, syncResetAlarms } from '../src/alerts';
+import * as WebBrowser from 'expo-web-browser';
 import {
-  barColor,
   formatAge,
   formatRemaining,
   formatWhen,
-  isValidTopic,
-  latestAlert,
-  latestSnapshot,
-  normalizeServer,
-  NtfyMessage,
-  parseNtfyLines,
-  sampleReset,
   sampleSnapshot,
   Snapshot,
-  topicFromInput,
   zoneLabel,
 } from '../src/model';
-import { loadSeen, loadSettings, saveSeen, saveSettings } from '../src/storage';
-
-type Mode = 'loading' | 'setup' | 'live' | 'sample';
+import { ensureBackground } from '../src/register-background';
+import { createLoginAttempt } from '../src/secure-session';
+import { finishSignIn, runSync, signOut } from '../src/sync-runner';
+import { barColor, dark, light, Palette } from '../src/theme';
 
 export default function HomeScreen() {
-  const [mode, setMode] = useState<Mode>('loading');
-  const [topic, setTopic] = useState('');
-  const [server, setServer] = useState('https://ntfy.sh');
-  const [draftTopic, setDraftTopic] = useState('');
-  const [draftServer, setDraftServer] = useState('https://ntfy.sh');
-  const [showServer, setShowServer] = useState(false);
-  const [formError, setFormError] = useState('');
+  const colors = useColorScheme() === 'dark' ? dark : light;
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [ready, setReady] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [alert, setAlert] = useState<NtfyMessage | null>(null);
+  const [sample, setSample] = useState(false);
   const [error, setError] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState('');
+  const [confirmOut, setConfirmOut] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [primed, setPrimed] = useState(false);
-  const [alarmCount, setAlarmCount] = useState(0);
 
-  const pull = useCallback(
-    async (nextTopic: string, nextServer: string, alreadyPrimed: boolean) => {
-      setRefreshing(true);
-      setError('');
-      try {
-        const [usageText, alertText] = await Promise.all([
-          readTopic(nextServer, `${nextTopic}-data`),
-          readTopic(nextServer, nextTopic),
-        ]);
-        const usageMessages = parseNtfyLines(usageText);
-        const alertMessages = parseNtfyLines(alertText);
-        const nextSnapshot = latestSnapshot(usageMessages);
-        setSnapshot(nextSnapshot);
-        const nextAlert = latestAlert(alertMessages);
-        setAlert(nextAlert);
-        setAlarmCount(nextSnapshot ? await syncResetAlarms(nextSnapshot.windows) : 0);
-        if (nextAlert) {
-          const seen = await loadSeen();
-          if (!alreadyPrimed) {
-            if (!seen.includes(nextAlert.id)) await saveSeen([...seen, nextAlert.id]);
-          } else if (!seen.includes(nextAlert.id)) {
-            await saveSeen([...seen, nextAlert.id]);
-            await notifyLocal(nextAlert.title || 'Claude usage', nextAlert.message);
-          }
-        }
-        if (!alreadyPrimed) setPrimed(true);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not reach ntfy.');
-      } finally {
-        setRefreshing(false);
-      }
-    },
-    [],
-  );
+  const refresh = useCallback(async () => {
+    try {
+      const outcome = await runSync(true);
+      setSignedIn(!outcome.signedOut);
+      setSnapshot(outcome.snapshot);
+      setError(outcome.error || '');
+      if (!outcome.signedOut) await ensureBackground();
+      return outcome;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not check usage.');
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const saved = await loadSettings();
-      if (cancelled) return;
-      if (saved.topic) {
-        setTopic(saved.topic);
-        setServer(saved.server);
-        setDraftTopic(saved.topic);
-        setDraftServer(saved.server);
-        await pull(saved.topic, saved.server, false);
-        if (!cancelled) setMode('live');
-      } else if (!cancelled) {
-        setMode('setup');
-      }
-    })();
+    void refresh().finally(() => {
+      if (!cancelled) setReady(true);
+    });
     return () => {
       cancelled = true;
     };
-  }, [pull]);
+  }, [refresh]);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30000);
@@ -112,194 +71,193 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (mode !== 'live' || !topic) return undefined;
+    if (!signedIn) return undefined;
     const timer = setInterval(() => {
-      void pull(topic, server, true);
-    }, 20000);
+      void refresh();
+    }, 5 * 60 * 1000);
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void pull(topic, server, true);
+      if (state === 'active') void refresh();
     });
     return () => {
       clearInterval(timer);
       sub.remove();
     };
-  }, [mode, topic, server, pull]);
+  }, [signedIn, refresh]);
 
-  async function onSave() {
-    const nextTopic = topicFromInput(draftTopic);
-    const nextServer = normalizeServer(draftServer);
-    if (!isValidTopic(nextTopic)) {
-      setFormError('Paste the topic from the computer. It looks like cu- followed by letters and numbers.');
-      return;
-    }
-    if (!/^https:\/\//i.test(nextServer)) {
-      setFormError('The server must start with https://');
-      return;
-    }
-    setFormError('');
-    await saveSettings(nextTopic, nextServer);
-    setTopic(nextTopic);
-    setServer(nextServer);
-    setPrimed(false);
-    setMode('live');
-    await pull(nextTopic, nextServer, false);
-  }
-
-  function showSample() {
-    const sample = sampleSnapshot();
-    setSnapshot(sample);
-    setAlert(null);
+  async function openSignIn() {
+    setBusy('browser');
     setError('');
-    setMode('sample');
+    try {
+      const attempt = await createLoginAttempt();
+      await WebBrowser.openBrowserAsync(attempt.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open the sign-in page.');
+    } finally {
+      setBusy('');
+    }
   }
 
-  async function simulateReset() {
-    if (!snapshot) return;
-    const next = sampleReset(snapshot);
-    setSnapshot(next);
-    const message: NtfyMessage = {
-      id: `sample-${Date.now()}`,
-      time: Math.floor(Date.now() / 1000),
-      title: '5-hour session reset',
-      message: 'Your 5-hour session limit has reset. This is a sample alert on this phone.',
-      tags: ['reset'],
-      topic: 'sample',
-    };
-    setAlert(message);
-    await notifyLocal(message.title, message.message);
+  async function connect() {
+    setBusy('connect');
+    setError('');
+    try {
+      await finishSignIn(code);
+      setCode('');
+      setSample(false);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not connect.');
+    } finally {
+      setBusy('');
+    }
   }
+
+  async function disconnect() {
+    if (!confirmOut) {
+      setConfirmOut(true);
+      return;
+    }
+    setBusy('signout');
+    setError('');
+    try {
+      await signOut();
+      setSignedIn(false);
+      setSnapshot(null);
+      setSample(false);
+      setConfirmOut(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign out.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  const shown = sample ? sampleSnapshot(now) : snapshot;
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {mode === 'loading' ? (
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {!ready ? (
           <View style={styles.centered}>
-            <ActivityIndicator color="#0f6e56" />
+            <ActivityIndicator color={colors.accent} />
           </View>
-        ) : mode === 'setup' ? (
-          <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>Claude usage</Text>
-            <Text style={styles.lede}>
-              Paste the topic printed by the helper on your computer. This screen then shows how
-              much of your Claude plan is used, and when it resets.
-            </Text>
-            <Text style={styles.label}>Phone topic</Text>
-            <TextInput
-              value={draftTopic}
-              onChangeText={setDraftTopic}
-              autoCapitalize="none"
-              autoCorrect={false}
-              placeholder="cu-…"
-              placeholderTextColor="#8a8175"
-              style={styles.input}
-            />
-            <Pressable onPress={() => setShowServer((value) => !value)} style={styles.textButton}>
-              <Text style={styles.textButtonLabel}>
-                {showServer ? 'Hide server' : 'Use a different ntfy server'}
-              </Text>
-            </Pressable>
-            {showServer ? (
-              <TextInput
-                value={draftServer}
-                onChangeText={setDraftServer}
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.input}
-              />
-            ) : null}
-            {formError ? <Text style={styles.error}>{formError}</Text> : null}
-            <Pressable style={styles.primary} onPress={() => void onSave()}>
-              <Text style={styles.primaryLabel}>Save and check</Text>
-            </Pressable>
-            <Pressable style={styles.secondary} onPress={showSample}>
-              <Text style={styles.secondaryLabel}>Preview with sample data</Text>
-            </Pressable>
-            <Text style={styles.note}>
-              Locked-phone alerts come from the free ntfy app, subscribed to the same topic. While
-              this app is open it can alert as well. Allow notifications if the phone asks.
-            </Text>
-          </ScrollView>
         ) : (
-          <ScrollView contentContainerStyle={styles.page}>
-            <View style={styles.headerRow}>
-              <Text style={styles.title}>Claude usage</Text>
-              {snapshot?.plan ? <Text style={styles.plan}>{snapshot.plan}</Text> : null}
-            </View>
-            {mode === 'sample' ? (
-              <Text style={styles.sampleBanner}>Sample data. This is not your Claude account.</Text>
-            ) : null}
+          <ScrollView
+            contentContainerStyle={styles.page}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={
+              signedIn && !sample ? (
+                <RefreshControl
+                  refreshing={busy === 'refresh'}
+                  tintColor={colors.accent}
+                  onRefresh={() => {
+                    setBusy('refresh');
+                    void refresh().finally(() => setBusy(''));
+                  }}
+                />
+              ) : undefined
+            }
+          >
+            <Text style={styles.title}>Plan Pace</Text>
+            {sample ? <Text style={styles.banner}>Sample numbers. This is not your account.</Text> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
-            {alert ? (
-              <View style={styles.alertBanner}>
-                <Text style={styles.alertTitle}>{alert.title || 'Claude usage'}</Text>
-                <Text style={styles.alertBody}>{alert.message}</Text>
+
+            {signedIn && !sample && shown ? (
+              <UsageBody snapshot={shown} now={now} styles={styles} colors={colors} />
+            ) : null}
+            {signedIn && !sample && !shown ? (
+              <Text style={styles.lede}>Checking your plan. This takes a moment the first time.</Text>
+            ) : null}
+            {sample && shown ? <UsageBody snapshot={shown} now={now} styles={styles} colors={colors} /> : null}
+
+            {!signedIn && !sample ? (
+              <View>
+                <Text style={styles.lede}>
+                  This phone reads your plan usage itself. Sign in once, paste the code the website shows, and the
+                  login stays on this phone.
+                </Text>
+                <Text style={styles.step}>1. Tap Open sign-in page. Sign in there if it asks.</Text>
+                <Text style={styles.step}>2. The page shows a code. Copy the whole code, including anything after a #.</Text>
+                <Text style={styles.step}>3. Come back here, paste it, and tap Connect.</Text>
+                <Pressable style={styles.primary} onPress={() => void openSignIn()} disabled={busy !== ''}>
+                  <Text style={styles.primaryLabel}>{busy === 'browser' ? 'Opening…' : 'Open sign-in page'}</Text>
+                </Pressable>
+                <Text style={styles.label}>Code from the sign-in page</Text>
+                <TextInput
+                  value={code}
+                  onChangeText={setCode}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  multiline
+                  nativeID="planpace-code"
+                  placeholder="Paste the code"
+                  placeholderTextColor={colors.muted}
+                  style={styles.input}
+                />
+                <Pressable style={styles.primary} onPress={() => void connect()} disabled={busy !== '' || code.trim() === ''}>
+                  <Text style={styles.primaryLabel}>{busy === 'connect' ? 'Connecting…' : 'Connect'}</Text>
+                </Pressable>
+                <Text style={styles.note}>
+                  The website cannot send you straight back into this app. Pasting the code is the same step the
+                  plan’s own command-line login uses. The code works once and expires after about 10 minutes.
+                </Text>
               </View>
             ) : null}
-            {snapshot ? (
-              <UsageBody snapshot={snapshot} now={now} />
-            ) : (
-              <Text style={styles.lede}>
-                No usage report yet. On your computer run node helper/cli.js once, then tap Refresh.
-              </Text>
-            )}
+
             <View style={styles.actions}>
-              {mode === 'live' ? (
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => void pull(topic, server, true)}
-                  disabled={refreshing}
-                >
-                  <Text style={styles.primaryLabel}>{refreshing ? 'Checking…' : 'Refresh'}</Text>
-                </Pressable>
-              ) : (
-                <Pressable style={styles.primary} onPress={() => void simulateReset()}>
-                  <Text style={styles.primaryLabel}>Simulate a reset</Text>
-                </Pressable>
-              )}
-              {mode === 'sample' ? (
+              {signedIn && !sample ? (
                 <Pressable
                   style={styles.secondary}
                   onPress={() => {
-                    if (!topic) {
-                      setMode('setup');
-                      return;
-                    }
-                    setAlert(null);
-                    setMode('live');
-                    void pull(topic, server, true);
+                    setBusy('refresh');
+                    void refresh().finally(() => setBusy(''));
                   }}
+                  disabled={busy !== ''}
                 >
-                  <Text style={styles.secondaryLabel}>{topic ? 'Back to live topic' : 'Back'}</Text>
+                  <Text style={styles.secondaryLabel}>{busy === 'refresh' ? 'Checking…' : 'Check now'}</Text>
+                </Pressable>
+              ) : null}
+              {sample ? (
+                <Pressable style={styles.secondary} onPress={() => setSample(false)}>
+                  <Text style={styles.secondaryLabel}>{signedIn ? 'Back to your plan' : 'Back'}</Text>
                 </Pressable>
               ) : (
                 <Pressable
-                  style={styles.secondary}
+                  style={styles.textButton}
                   onPress={() => {
-                    setDraftTopic(topic);
-                    setDraftServer(server);
-                    setMode('setup');
+                    setError('');
+                    setSample(true);
                   }}
                 >
-                  <Text style={styles.secondaryLabel}>Change topic</Text>
+                  <Text style={styles.textButtonLabel}>See sample numbers</Text>
                 </Pressable>
               )}
-              {mode === 'live' ? (
-                <Pressable style={styles.textButton} onPress={showSample}>
-                  <Text style={styles.textButtonLabel}>Preview with sample data</Text>
+              {signedIn ? (
+                <Pressable style={styles.textButton} onPress={() => void disconnect()} disabled={busy === 'signout'}>
+                  <Text style={styles.textButtonLabel}>
+                    {busy === 'signout'
+                      ? 'Signing out…'
+                      : confirmOut
+                        ? 'Tap again to delete the login from this phone'
+                        : 'Sign out'}
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
+
+            {Platform.OS === 'android' ? (
+              <Text style={styles.note}>
+                Home screen widget: long-press the home screen, tap Widgets, and add Plan Pace. It shows the 5-hour
+                and weekly percents. Add it after you have connected, then open the app once so the widget fills in.
+              </Text>
+            ) : null}
             <Text style={styles.note}>
-              Numbers come from your Claude plan, checked on your computer about every 10 minutes.
-              Times are {zoneLabel(snapshot?.timeZone)}.
-              {mode === 'live' && alarmCount > 0
-                ? ' This phone will also alert at the reset time, even if the app is closed.'
-                : ''}{' '}
-              The ntfy app alerts as well, including when this app has not been opened.
+              The phone checks again in the background, usually every 15 minutes or longer. The phone decides the
+              exact time. Opening the app checks immediately. A notification is also set for each reset time. Allow
+              notifications
+              {Platform.OS === 'android' ? ', and on Android 12 or newer allow Alarms & reminders for Plan Pace' : ''}.
             </Text>
+            <Text style={styles.footer}>Plan Pace is not affiliated with Anthropic.</Text>
           </ScrollView>
         )}
       </KeyboardAvoidingView>
@@ -307,20 +265,26 @@ export default function HomeScreen() {
   );
 }
 
-function UsageBody({ snapshot, now }: { snapshot: Snapshot; now: number }) {
+function UsageBody({
+  snapshot,
+  now,
+  styles,
+  colors,
+}: {
+  snapshot: Snapshot;
+  now: number;
+  styles: ReturnType<typeof makeStyles>;
+  colors: Palette;
+}) {
   const ageMs = now - Date.parse(snapshot.fetchedAt);
-  const stale = Number.isFinite(ageMs) && ageMs > 25 * 60 * 1000;
+  const stale = Number.isFinite(ageMs) && ageMs > 45 * 60 * 1000;
   const zone = snapshot.timeZone || 'Europe/London';
   return (
     <View>
       <Text style={styles.updated}>
         Updated {formatAge(snapshot.fetchedAt, now)} · {formatWhen(snapshot.fetchedAt, zone)}
       </Text>
-      {stale ? (
-        <Text style={styles.stale}>
-          This report is old. The helper on your computer may be asleep or not running.
-        </Text>
-      ) : null}
+      {stale ? <Text style={styles.stale}>This report is old. Open the app with a connection, or tap Check now.</Text> : null}
       {snapshot.windows.map((window) => {
         const percent = Math.max(0, Math.min(100, window.usedPercent));
         return (
@@ -328,9 +292,7 @@ function UsageBody({ snapshot, now }: { snapshot: Snapshot; now: number }) {
             <Text style={styles.cardLabel}>{window.label}</Text>
             <Text style={styles.percent}>{percent}%</Text>
             <View style={styles.track}>
-              <View
-                style={[styles.fill, { width: `${percent}%`, backgroundColor: barColor(percent) }]}
-              />
+              <View style={[styles.fill, { width: `${percent}%`, backgroundColor: barColor(percent, colors) }]} />
             </View>
             <Text style={styles.cardDetail}>
               {percent >= 100 ? 'Limit reached. ' : 'Used. '}
@@ -362,114 +324,92 @@ function UsageBody({ snapshot, now }: { snapshot: Snapshot; now: number }) {
   );
 }
 
-async function readTopic(server: string, topic: string): Promise<string> {
-  let response: Response;
-  try {
-    response = await fetch(`${server}/${encodeURIComponent(topic)}/json?poll=1&since=24h`);
-  } catch {
-    throw new Error('Could not reach ntfy. Check the phone’s connection and the topic.');
-  }
-  if (!response.ok) {
-    throw new Error(`ntfy returned ${response.status}. Check the topic and server.`);
-  }
-  return response.text();
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.bg },
+    flex: { flex: 1 },
+    centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    page: {
+      paddingHorizontal: 20,
+      paddingBottom: 36,
+      width: '100%',
+      maxWidth: 560,
+      alignSelf: 'center',
+    },
+    title: { fontSize: 32, fontWeight: '700', color: colors.text, marginTop: 12 },
+    lede: { fontSize: 17, lineHeight: 24, color: colors.text, marginTop: 10 },
+    step: { fontSize: 16, lineHeight: 22, color: colors.text, marginTop: 8 },
+    label: { fontSize: 14, color: colors.muted, marginTop: 16, marginBottom: 6 },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.line,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      minHeight: 88,
+      fontSize: 16,
+      color: colors.text,
+      textAlignVertical: 'top',
+    },
+    primary: {
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    primaryLabel: { color: colors.accentText, fontSize: 16, fontWeight: '700' },
+    secondary: {
+      borderWidth: 1,
+      borderColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginTop: 10,
+    },
+    secondaryLabel: { color: colors.accent, fontSize: 16, fontWeight: '600' },
+    textButton: { paddingVertical: 12, alignItems: 'center' },
+    textButtonLabel: { color: colors.accent, fontSize: 15 },
+    note: { color: colors.muted, fontSize: 14, lineHeight: 20, marginTop: 16 },
+    footer: { color: colors.muted, fontSize: 13, lineHeight: 18, marginTop: 18 },
+    error: {
+      backgroundColor: colors.errorBg,
+      color: colors.errorText,
+      padding: 12,
+      borderRadius: 12,
+      marginTop: 12,
+      fontSize: 15,
+      lineHeight: 20,
+    },
+    banner: {
+      backgroundColor: colors.banner,
+      color: colors.text,
+      padding: 12,
+      borderRadius: 12,
+      marginTop: 12,
+      fontSize: 15,
+    },
+    updated: { color: colors.muted, marginTop: 10, fontSize: 14 },
+    stale: { color: colors.warn, marginTop: 8, fontSize: 15, lineHeight: 20 },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.line,
+    },
+    cardLabel: { fontSize: 16, color: colors.muted },
+    percent: { fontSize: 42, fontWeight: '700', color: colors.text, marginVertical: 4 },
+    track: { height: 8, backgroundColor: colors.track, borderRadius: 99, overflow: 'hidden' },
+    fill: { height: 8, borderRadius: 99 },
+    cardDetail: { marginTop: 10, fontSize: 16, color: colors.text },
+    cardTime: { marginTop: 2, fontSize: 14, color: colors.muted },
+    extra: { marginTop: 12, fontSize: 15, color: colors.text },
+    history: { marginTop: 18 },
+    historyTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 6 },
+    historyRow: { fontSize: 14, color: colors.muted, paddingVertical: 3 },
+    actions: { marginTop: 8 },
+  });
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f3efe6' },
-  flex: { flex: 1 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  page: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    width: '100%',
-    maxWidth: 560,
-    alignSelf: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  title: { fontSize: 28, fontWeight: '700', color: '#1c1915', marginTop: 12 },
-  plan: { color: '#5c564e', fontSize: 16 },
-  lede: { fontSize: 16, lineHeight: 22, color: '#3f3a34', marginTop: 8, marginBottom: 16 },
-  label: { fontSize: 14, color: '#5c564e', marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d9d0c3',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1c1915',
-  },
-  primary: {
-    backgroundColor: '#0f6e56',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  primaryLabel: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  secondary: {
-    borderWidth: 1,
-    borderColor: '#0f6e56',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  secondaryLabel: { color: '#0f6e56', fontSize: 16, fontWeight: '600' },
-  textButton: { paddingVertical: 10 },
-  textButtonLabel: { color: '#0f6e56', fontSize: 15 },
-  note: { color: '#5c564e', fontSize: 14, lineHeight: 20, marginTop: 18 },
-  error: {
-    backgroundColor: '#f8e6e4',
-    color: '#6d1f1f',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 12,
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  sampleBanner: {
-    backgroundColor: '#efe6c8',
-    color: '#3f3a34',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 8,
-    fontSize: 15,
-  },
-  alertBanner: {
-    backgroundColor: '#e5f3ee',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 12,
-  },
-  alertTitle: { fontSize: 16, fontWeight: '700', color: '#0f6e56' },
-  alertBody: { fontSize: 15, lineHeight: 21, color: '#1c1915', marginTop: 4 },
-  updated: { color: '#5c564e', marginTop: 8, fontSize: 14 },
-  stale: { color: '#8a5a00', marginTop: 8, fontSize: 15, lineHeight: 20 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 14,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#e6dfd4',
-  },
-  cardLabel: { fontSize: 16, color: '#3f3a34' },
-  percent: { fontSize: 40, fontWeight: '700', color: '#1c1915', marginVertical: 4 },
-  track: { height: 10, backgroundColor: '#e6e0d6', borderRadius: 99, overflow: 'hidden' },
-  fill: { height: 10, borderRadius: 99 },
-  cardDetail: { marginTop: 8, fontSize: 16, color: '#1c1915' },
-  cardTime: { marginTop: 2, fontSize: 14, color: '#5c564e' },
-  extra: { marginTop: 12, fontSize: 15, color: '#3f3a34' },
-  history: { marginTop: 18 },
-  historyTitle: { fontSize: 16, fontWeight: '700', color: '#1c1915', marginBottom: 6 },
-  historyRow: { fontSize: 14, color: '#3f3a34', paddingVertical: 3 },
-  actions: { marginTop: 4 },
-});
