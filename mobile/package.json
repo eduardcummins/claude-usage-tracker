@@ -27,7 +27,9 @@
     "android": "expo start --android --port 8091",
     "ios": "expo start --ios --port 8091",
     "web": "expo start --web --port 8091",
-    "test": "node --experimental-strip-types --test src/model.test.ts"
+    "build:android": "npx eas-cli@latest build --platform android --profile preview",
+    "build:ios": "npx eas-cli@latest build --platform ios --profile production --auto-submit",
+    "test": "node --experimental-strip-types --test src/model.test.ts plugins/without-push-entitlement.test.js"
   },
   "private": true
 }
