@@ -1,0 +1,5 @@
+{
+  "ntfyServer": "https://ntfy.sh",
+  "ntfyTopic": "cu-replace-this-with-the-topic-from-init",
+  "timeZone": "Europe/London"
+}

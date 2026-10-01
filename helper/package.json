@@ -1,0 +1,15 @@
+{
+  "name": "claude-usage-alert-helper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reads Claude plan usage on this computer and sends a phone alert when a limit resets.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node cli.js",
+    "doctor": "node cli.js --doctor",
+    "test": "node --test test/parse-usage.test.js test/resets.test.js test/time.test.js test/credentials.test.js test/install.test.js test/run.test.js"
+  }
+}

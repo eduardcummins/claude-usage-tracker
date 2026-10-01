@@ -1,0 +1,28 @@
+{
+  "five_hour": null,
+  "seven_day": null,
+  "seven_day_sonnet": null,
+  "seven_day_opus": null,
+  "limits": [
+    {
+      "kind": "session",
+      "percent": 12,
+      "resets_at": "2026-10-01T17:00:00Z"
+    },
+    {
+      "kind": "weekly_all",
+      "percent": 9,
+      "resets_at": "2026-10-05T16:00:00Z"
+    },
+    {
+      "kind": "weekly_scoped",
+      "percent": 41,
+      "resets_at": "2026-10-05T16:00:00Z",
+      "is_active": true,
+      "scope": {
+        "model": { "id": null, "display_name": "Fable" },
+        "surface": null
+      }
+    }
+  ]
+}
