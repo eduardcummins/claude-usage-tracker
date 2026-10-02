@@ -10,6 +10,6 @@
   "scripts": {
     "check": "node cli.js",
     "doctor": "node cli.js --doctor",
-    "test": "node --test test/parse-usage.test.js test/resets.test.js test/time.test.js test/credentials.test.js test/install.test.js test/ntfy.test.js test/qr.test.js test/run.test.js test/seal.test.js test/pairing.test.js test/refresh-backoff.test.js test/windows-scripts.test.js"
+    "test": "node --test test/parse-usage.test.js test/resets.test.js test/time.test.js test/credentials.test.js test/install.test.js test/ntfy.test.js test/qr.test.js test/run.test.js test/seal.test.js test/pairing.test.js test/refresh-backoff.test.js test/windows-scripts.test.js test/mac-scripts.test.js"
   }
 }
