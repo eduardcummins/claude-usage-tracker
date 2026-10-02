@@ -114,6 +114,20 @@ test('a rejected usage call refreshes once and tries again', async () => {
   assert.equal(result.windows?.[0].usedPercent, 4);
 });
 
+test('a failed usage read names the stage and HTTP status', async () => {
+  const fetchImpl = async () => json({ error: 'forbidden', error_description: 'sk-ant-oat01-SECRET' }, 403);
+  const result = await syncUsage({
+    fetch: fetchImpl as typeof fetch,
+    now,
+    session: { accessToken: 'access', refreshToken: 'refresh', expiresAt: now + 60 * 60 * 1000 },
+    previousWindows: null,
+    scheduled: {},
+  });
+  assert.equal(result.signedOut, false);
+  assert.match(result.error || '', /Usage check failed \(HTTP 403\): forbidden: \[redacted\]/);
+  assert.equal((result.error || '').includes('SECRET'), false);
+});
+
 test('a rejected refresh signs the phone out', async () => {
   const fetchImpl = async () => json({ error: 'invalid_grant' }, 400);
   const result = await syncUsage({
