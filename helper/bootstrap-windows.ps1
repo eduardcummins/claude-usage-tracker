@@ -44,3 +44,4 @@ node $cli --init
 & (Join-Path $src "helper\install-windows.ps1")
 Write-Host ""
 Write-Host "Leave this PC awake. Cluse on the phone reads a new report about every 10 minutes."
+Write-Host "Scan the pairing code in Cluse. A topic that starts with cu- still works."

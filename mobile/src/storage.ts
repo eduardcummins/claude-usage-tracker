@@ -2,7 +2,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOPIC = 'claude-usage-topic';
 const SERVER = 'claude-usage-server';
+const KEY = 'claude-usage-key';
+const RELAY = 'claude-usage-relay'; // removed so an older saved blob is not reused
 const SEEN = 'claude-usage-seen';
+
+export type PhoneLink = { kind: 'ntfy'; topic: string; server: string; key: string };
+
+export async function loadLink(): Promise<PhoneLink | null> {
+  const settings = await loadSettings();
+  if (!settings.topic) return null;
+  const key = (await AsyncStorage.getItem(KEY)) || '';
+  return { kind: 'ntfy', topic: settings.topic, server: settings.server, key };
+}
+
+export async function saveLink(link: PhoneLink): Promise<void> {
+  await saveSettings(link.topic, link.server);
+  if (link.key) await AsyncStorage.setItem(KEY, link.key);
+  else await AsyncStorage.removeItem(KEY);
+  await AsyncStorage.removeItem(RELAY);
+}
 
 export async function loadSettings(): Promise<{ topic: string; server: string }> {
   const [topic, server] = await Promise.all([
@@ -51,6 +69,7 @@ export type WidgetCache = {
   weeklyPercent: number | null;
   weeklyReset: string | null;
   fetchedAt: string | null;
+  recent: { t: string; session: number | null; weekly: number | null }[];
 };
 
 export const emptyWidget: WidgetCache = {
@@ -61,6 +80,7 @@ export const emptyWidget: WidgetCache = {
   weeklyPercent: null,
   weeklyReset: null,
   fetchedAt: null,
+  recent: [],
 };
 
 export async function loadWidgetCache(): Promise<WidgetCache> {
@@ -109,7 +129,7 @@ export async function saveSnapshot(snapshot: import('./model.ts').Snapshot): Pro
 }
 
 export async function clearPlanData(): Promise<void> {
-  await AsyncStorage.multiRemove([WIDGET, HISTORY, WINDOWS, SCHEDULED, SNAPSHOT]);
+  await AsyncStorage.multiRemove([WIDGET, HISTORY, WINDOWS, SCHEDULED, SNAPSHOT, RELAY, KEY, TOPIC, SERVER]);
 }
 
 async function readJson<T>(key: string): Promise<T | null> {

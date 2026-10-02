@@ -106,18 +106,18 @@ export function SetupFlow({
 
       {step === 2 ? (
         <View>
-          <Text style={styles.title}>Add the topic</Text>
+          <Text style={styles.title}>Add the code</Text>
           <Text style={styles.lede}>
-            Paste the line that starts with “Phone topic”, or scan the code the helper shows.
+            Paste the pairing code, or scan the QR code. A topic that starts with cu- still works.
           </Text>
-          <Text style={styles.hint}>Topic</Text>
+          <Text style={styles.hint}>Pairing code</Text>
           <TextInput
             value={topic}
             onChangeText={onTopic}
             autoCapitalize="none"
             autoCorrect={false}
             nativeID="planpace-topic"
-            placeholder="Paste the topic"
+            placeholder="Paste the code"
             placeholderTextColor={colors.muted}
             style={styles.input}
           />
@@ -128,7 +128,7 @@ export function SetupFlow({
             <Text style={styles.secondaryLabel}>Scan QR code</Text>
           </Pressable>
           <Text style={styles.note}>
-            The topic is a password. Anyone who has it can see the percentages. It stays on this phone.
+            A pairing code is the encryption key. ntfy only sees the encrypted report. A plain cu- topic is still a password for the percentages.
           </Text>
         </View>
       ) : null}

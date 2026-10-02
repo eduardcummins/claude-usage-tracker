@@ -17,9 +17,9 @@
     },
     "android": {
       "package": "com.eduardcummins.claudeusage",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
-        "backgroundColor": "#faf9f5",
+        "backgroundColor": "#F9F7F3",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -67,7 +67,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#faf9f5",
+          "backgroundColor": "#F9F7F3",
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
@@ -88,8 +88,32 @@
               "minHeight": "140dp",
               "targetCellWidth": 4,
               "targetCellHeight": 2,
-              "description": "5-hour and weekly plan usage",
+              "description": "Session and weekly rings",
               "previewImage": "./assets/widget-preview.png",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "CluseCompact",
+              "label": "Cluse session",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "description": "5-hour session",
+              "previewImage": "./assets/widget-preview-compact.png",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "CluseBars",
+              "label": "Cluse bars",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "description": "Session and weekly bars",
+              "previewImage": "./assets/widget-preview-bars.png",
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
             }

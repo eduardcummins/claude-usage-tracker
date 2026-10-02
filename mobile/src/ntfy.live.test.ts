@@ -17,7 +17,9 @@ test('a mock helper publish is returned by the app poll on ntfy.sh', async () =>
   const config = JSON.parse(await fs.readFile(appPaths(home).config, 'utf8')) as {
     ntfyServer: string;
     ntfyTopic: string;
+    ntfyKey: string;
   };
+  assert.ok(config.ntfyKey);
   assert.equal(
     await main(['--mock', '--scenario', 'before'], {
       homeDir: home,
@@ -30,7 +32,7 @@ test('a mock helper publish is returned by the app poll on ntfy.sh', async () =>
   );
   assert.match(logs.join('\n'), /Sent the usage update/);
 
-  const snapshot = await waitForSnapshot(config.ntfyServer, config.ntfyTopic);
+  const snapshot = await waitForSnapshot(config.ntfyServer, config.ntfyTopic, config.ntfyKey);
   const session = snapshot.windows.find((window) => window.id === 'session');
   const weekly = snapshot.windows.find((window) => window.id === 'weekly');
   assert.equal(session?.usedPercent, 86);
@@ -47,25 +49,33 @@ test('a mock helper publish is returned by the app poll on ntfy.sh', async () =>
 
   const base = await fetch(`${config.ntfyServer}/${config.ntfyTopic}/json?poll=1&since=12h`);
   assert.equal(base.ok, true);
-  assert.equal(latestSnapshot(parseNtfyLines(await base.text())), null);
+  const bare = await base.text();
+  assert.equal(latestSnapshot(parseNtfyLines(bare)), null);
+  assert.equal(bare.includes('Sample'), false);
 
   const raw = await fetch(pollUrl(config.ntfyServer, config.ntfyTopic));
   const line = (await raw.text()).trim().split('\n').filter(Boolean).at(-1);
   assert.ok(line);
-  const event = JSON.parse(line) as { topic?: string; time?: number; expires?: number };
+  const event = JSON.parse(line) as { topic?: string; title?: string; message?: string; time?: number; expires?: number };
   assert.equal(event.topic, `${config.ntfyTopic}-data`);
+  assert.equal(event.title, 'Cluse');
+  assert.equal(String(event.message).includes('Sample'), false);
+  assert.equal(String(event.message).includes('usedPercent'), false);
+  assert.equal(String(event.title).includes('%'), false);
   assert.ok(event.expires && event.time && event.expires - event.time >= 11 * 60 * 60);
 });
 
-async function waitForSnapshot(server: string, topic: string) {
+async function waitForSnapshot(server: string, topic: string, key: string) {
   const deadline = Date.now() + 20000;
   let last = '';
   while (Date.now() < deadline) {
-    const response = await fetch(pollUrl(server, topic));
-    last = await response.text();
-    const snapshot = latestSnapshot(parseNtfyLines(last));
-    if (snapshot) return snapshot;
+    try {
+      const snapshot = await fetchLatestSnapshot(fetch, server, topic, key);
+      if (snapshot) return snapshot;
+    } catch (err) {
+      last = err instanceof Error ? err.message : String(err);
+    }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  throw new Error(`No cached snapshot on the data topic. Last poll body: ${JSON.stringify(last.slice(0, 240))}`);
+  throw new Error(`No cached snapshot on the data topic. Last poll: ${JSON.stringify(last.slice(0, 240))}`);
 }

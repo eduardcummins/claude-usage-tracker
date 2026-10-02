@@ -3,11 +3,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { newTopic, readConfig, requireConfig, writeConfig } from './config.js';
+import { defaultNtfyServer } from './server.js';
 import { ensureFreshCredentials, loadCredentials } from './credentials.js';
 import { UserError } from './errors.js';
 import { installMac, uninstallMac } from './install.js';
 import { dataTopic, publishNtfy } from './ntfy.js';
+import { encodePairing } from './pairing.js';
 import { writeTopicPage } from './qr.js';
+import { newKey, sealJson } from './seal.js';
 import { fetchUsageResponse } from './oauth.js';
 import { formatPlan, parseUsageResponse } from './parse-usage.js';
 import { appPaths } from './paths.js';
@@ -116,14 +119,15 @@ export async function main(argv, deps = {}) {
 async function initConfig(deps, args) {
   const existing = await readConfig(deps.homeDir);
   if (existing && !args.rotate) {
-    printTopic(deps, existing);
+    await printTopic(deps, existing);
     deps.log('Left the existing topic in place. To make a new one, run: node helper/cli.js --init --rotate');
     return 0;
   }
   const config = {
-    ntfyServer: 'https://ntfy.sh',
+    ntfyServer: defaultNtfyServer(deps.env),
     ntfyTopic: newTopic(),
-    timeZone: 'Europe/London',
+    ntfyKey: newKey(),
+    timeZone: existing?.timeZone || 'Europe/London',
   };
   const file = await writeConfig(deps.homeDir, config);
   deps.log(`Saved ${file}`);
@@ -132,32 +136,50 @@ async function initConfig(deps, args) {
 }
 
 async function printTopic(deps, config) {
-  const page = await writeTopicPage(deps.homeDir, config.ntfyTopic);
+  const pairing = config.ntfyKey
+    ? encodePairing({ url: config.ntfyServer, topic: config.ntfyTopic, key: config.ntfyKey })
+    : '';
+  const code = pairing || config.ntfyTopic;
+  const page = await writeTopicPage(deps.homeDir, code, pairing ? config.ntfyTopic : '');
   deps.log('');
+  if (pairing) {
+    deps.log('Pairing code:');
+    deps.log(pairing);
+    deps.log('');
+  }
   deps.log(`Phone topic: ${config.ntfyTopic}`);
   deps.log(`Usage updates are published to ${config.ntfyServer}/${dataTopic(config.ntfyTopic)}`);
   deps.log('');
   deps.log(page.terminal);
   deps.log('');
-  deps.log('On the phone, open Cluse, paste the phone topic, or scan the code above.');
+  deps.log('On the phone, open Cluse and scan the code above, or paste the pairing code.');
+  deps.log('A plain cu- topic with no key still works until you pair.');
   deps.log(`A larger code is saved at ${page.file}`);
-  deps.log('The ntfy app is not required.');
-  deps.log('Treat the topic like a password. Anyone who knows it can see usage percentages.');
+  deps.log('The ntfy app is not required. Reset alerts are scheduled on the phone.');
+  if (pairing) {
+    deps.log('The pairing code is the only copy of the encryption key. ntfy stores ciphertext.');
+  } else {
+    deps.log('Treat the topic like a password. Anyone who knows it can see usage percentages.');
+  }
 }
 
 async function sendTestAlert(deps) {
   const config = await requireConfig(deps.homeDir);
+  if (!config.ntfyKey) {
+    deps.log('This topic has no encryption key, so no test message was sent. Reset alerts are scheduled on the phone.');
+    return 0;
+  }
   await publishNtfy({
     server: config.ntfyServer,
-    topic: config.ntfyTopic,
-    title: 'Test from your computer',
-    message: 'Claude usage alerts are working. You can ignore this message.',
-    priority: 5,
+    topic: dataTopic(config.ntfyTopic),
+    title: 'Cluse',
+    message: JSON.stringify(sealJson(config.ntfyKey, { v: 1, type: 'test' })),
+    priority: 1,
     tags: ['test'],
     token: config.ntfyToken,
     fetch: deps.fetch,
   });
-  deps.log('Sent a test alert to the phone topic. Cluse reads usage from the matching -data topic.');
+  deps.log('Sent an encrypted test message. Reset alerts are scheduled on the phone.');
   return 0;
 }
 
@@ -229,28 +251,17 @@ export async function runCheck(deps, args) {
     }
 
     const fitted = fitSnapshot(snapshot);
+    const encrypted = Boolean(config.ntfyKey);
     await publishNtfy({
       server: config.ntfyServer,
       topic: dataTopic(config.ntfyTopic),
-      title: fitted.windows.map((window) => `${window.shortLabel} ${window.usedPercent}%`).join(' · '),
-      message: JSON.stringify(fitted),
+      title: encrypted ? 'Cluse' : fitted.windows.map((window) => `${window.shortLabel} ${window.usedPercent}%`).join(' · '),
+      message: encrypted ? JSON.stringify(sealJson(config.ntfyKey, fitted)) : JSON.stringify(fitted),
       priority: 1,
       tags: ['snapshot'],
       token: config.ntfyToken,
       fetch: deps.fetch,
     });
-    if (alert) {
-      await publishNtfy({
-        server: config.ntfyServer,
-        topic: config.ntfyTopic,
-        title: alert.title,
-        message: alert.message,
-        priority: 5,
-        tags: ['reset'],
-        token: config.ntfyToken,
-        fetch: deps.fetch,
-      });
-    }
 
     const notified = { ...state.notifiedResets };
     for (const window of alerts) notified[window.id] = window.resetsAt;
@@ -265,7 +276,7 @@ export async function runCheck(deps, args) {
       notifiedResets: notified,
       backoffUntil: null,
     });
-    deps.log(alert ? 'Sent the usage update and the reset alert.' : 'Sent the usage update.');
+    deps.log('Sent the usage update.');
     return 0;
   });
 }

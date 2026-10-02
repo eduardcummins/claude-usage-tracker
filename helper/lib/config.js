@@ -31,7 +31,17 @@ export function normalizeConfig(data) {
     ntfyTopic: topic,
     ntfyToken: data.ntfyToken ? String(data.ntfyToken) : '',
     timeZone: data.timeZone || data.timezone || 'Europe/London',
+    ntfyKey: normalizeKey(data.ntfyKey),
   };
+}
+
+function normalizeKey(value) {
+  const key = value ? String(value) : '';
+  if (!key) return '';
+  if (Buffer.from(key, 'base64url').length !== 32) {
+    throw new UserError('The encryption key in the helper config is not valid. Run --init --rotate to pair again.');
+  }
+  return key;
 }
 
 export async function writeConfig(homeDir, config) {
