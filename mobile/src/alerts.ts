@@ -6,6 +6,19 @@ type ResetWindow = {
   resetsAt: string | null;
 };
 
+export async function cancelResetAlarms(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const Notifications = await import('expo-notifications');
+  const current = await Notifications.getPermissionsAsync();
+  if (current.status !== 'granted') return;
+  const existing = await Notifications.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    existing
+      .filter((item) => item.content.data?.kind === 'reset')
+      .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)),
+  );
+}
+
 export async function notifyLocal(title: string, body: string): Promise<void> {
   const notifications = await prepareNotifications();
   if (!notifications) return;
