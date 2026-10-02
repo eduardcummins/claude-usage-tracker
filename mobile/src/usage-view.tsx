@@ -5,8 +5,9 @@ import {
   formatAge,
   formatRemaining,
   formatWhen,
+  presentSnapshot,
+  PresentedWindow,
   Snapshot,
-  UsageWindow,
 } from './model';
 import { barColor, bodyFont, displayFont, Palette } from './theme';
 
@@ -50,7 +51,8 @@ export function UsageHome({
 }) {
   const styles = makeStyles(colors);
   const zone = deviceTimeZone();
-  const stale = snapshot != null && now - Date.parse(snapshot.fetchedAt) > STALE_AFTER_MS;
+  const presented = snapshot ? presentSnapshot(snapshot, now) : null;
+  const stale = snapshot != null && !presented?.waitingNote && now - Date.parse(snapshot.fetchedAt) > STALE_AFTER_MS;
   return (
     <View>
       <View style={styles.header}>
@@ -60,12 +62,13 @@ export function UsageHome({
         </Pressable>
       </View>
       {snapshot?.plan ? <Text style={styles.plan}>{snapshot.plan}</Text> : null}
-      {snapshot ? (
+      {snapshot && snapshot.windows.length > 0 ? (
         <Text style={styles.quiet}>
           Updated {formatAge(snapshot.fetchedAt, now)} · {formatWhen(snapshot.fetchedAt, zone)}
         </Text>
       ) : null}
       {error ? <Notice colors={colors} tone="error" text={error} /> : null}
+      {presented?.waitingNote ? <Notice colors={colors} tone="warn" text={presented.waitingNote} /> : null}
       {stale ? (
         <Notice colors={colors} tone="warn" text="These numbers are old. The computer may be asleep." />
       ) : null}
@@ -78,7 +81,7 @@ export function UsageHome({
           </Text>
         </View>
       ) : null}
-      {snapshot?.windows.map((window) => (
+      {presented?.windows.map((window) => (
         <MeterCard key={window.id} window={window} now={now} zone={zone} colors={colors} />
       ))}
       {snapshot?.extraUsageLabel ? <Text style={styles.extra}>{snapshot.extraUsageLabel}</Text> : null}
@@ -154,13 +157,13 @@ function MeterCard({
   zone,
   colors,
 }: {
-  window: UsageWindow;
+  window: PresentedWindow;
   now: number;
   zone: string;
   colors: Palette;
 }) {
   const styles = makeStyles(colors);
-  const percent = Math.max(0, Math.min(100, Math.round(window.usedPercent)));
+  const percent = Math.max(0, Math.min(100, Math.round(window.displayPercent)));
   const color = barColor(percent, colors);
   return (
     <View style={styles.card}>
@@ -175,6 +178,7 @@ function MeterCard({
         <Text style={styles.countdown}>
           {window.resetsAt ? formatRemaining(window.resetsAt, now) : 'No reset time reported'}
         </Text>
+        {window.sinceResetNote ? <Text style={styles.sinceReset}>{window.sinceResetNote}</Text> : null}
         {window.resetsAt ? <Text style={styles.clock}>{formatWhen(window.resetsAt, zone)} · your time</Text> : null}
       </View>
     </View>
@@ -319,6 +323,14 @@ function makeStyles(colors: Palette) {
       fontSize: 16,
       lineHeight: 22,
       color: colors.text,
+    },
+    sinceReset: {
+      fontFamily: bodyFont,
+      marginTop: 4,
+      fontSize: 15,
+      lineHeight: 20,
+      color: colors.accent,
+      fontWeight: '600',
     },
     clock: {
       fontFamily: bodyFont,

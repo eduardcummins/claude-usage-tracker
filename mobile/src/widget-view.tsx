@@ -1,5 +1,5 @@
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
-import { formatRemaining } from './model';
+import { presentPercent, resetCaption } from './model';
 import type { WidgetCache } from './storage';
 import {
   barColor,
@@ -61,16 +61,16 @@ export function UsageWidget({
         >
           <Meter
             label="5-hour"
-            percent={cache.sessionPercent}
-            when={cache.sessionReset ? formatRemaining(cache.sessionReset, now) : 'No report yet'}
+            percent={presentPercent(cache.sessionPercent, cache.sessionReset, now).percent}
+            when={resetCaption(cache.sessionReset, now)}
             inner={inner}
             metrics={metrics}
             colors={colors}
           />
           <Meter
             label="Weekly"
-            percent={cache.weeklyPercent}
-            when={cache.weeklyReset ? formatRemaining(cache.weeklyReset, now) : 'No report yet'}
+            percent={presentPercent(cache.weeklyPercent, cache.weeklyReset, now).percent}
+            when={resetCaption(cache.weeklyReset, now)}
             inner={inner}
             metrics={metrics}
             colors={colors}

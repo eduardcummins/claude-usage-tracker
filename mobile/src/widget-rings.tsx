@@ -1,5 +1,5 @@
 import { FlexWidget, ImageWidget, OverlapWidget, SvgWidget, TextWidget } from 'react-native-android-widget';
-import { deviceTimeZone, formatRemaining } from './model';
+import { deviceTimeZone, presentPercent, resetCaption } from './model';
 import type { WidgetCache } from './storage';
 import { barColor, widgetPalettes, type WidgetScheme } from './widget-layout';
 
@@ -19,6 +19,8 @@ export function RingsWidget({
   const colors = widgetPalettes[scheme];
   const ring = Math.max(52, Math.min(78, Math.floor(Math.min(height * 0.42, width / 4.4))));
   const lines = recentLines(cache, 2);
+  const session = presentPercent(cache.sessionPercent, cache.sessionReset, now);
+  const weekly = presentPercent(cache.weeklyPercent, cache.weeklyReset, now);
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -39,11 +41,18 @@ export function RingsWidget({
       <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', justifyContent: 'space-around' }}>
         <RingMeter
           label="5-hour"
-          percent={cache.sessionPercent}
+          percent={session.percent}
+          sinceReset={session.sinceReset}
           size={ring}
           colors={colors}
         />
-        <RingMeter label="Weekly" percent={cache.weeklyPercent} size={ring} colors={colors} />
+        <RingMeter
+          label="Weekly"
+          percent={weekly.percent}
+          sinceReset={weekly.sinceReset}
+          size={ring}
+          colors={colors}
+        />
       </FlexWidget>
       <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <FlexWidget style={{ flexDirection: 'column', flex: 1 }}>
@@ -89,7 +98,8 @@ export function CompactWidget({
 }) {
   const colors = widgetPalettes[scheme];
   const ring = Math.max(64, Math.min(96, Math.floor(Math.min(width, height) * 0.46)));
-  const when = cache.sessionReset ? formatRemaining(cache.sessionReset, now) : 'No report yet';
+  const session = presentPercent(cache.sessionPercent, cache.sessionReset, now);
+  const when = resetCaption(cache.sessionReset, now);
   const plan = cache.plan || '';
   return (
     <FlexWidget
@@ -127,13 +137,13 @@ export function CompactWidget({
       </FlexWidget>
       <OverlapWidget style={{ width: ring, height: ring }}>
         <SvgWidget
-          svg={ringSvg(cache.sessionPercent, barColor(cache.sessionPercent, colors), colors.track)}
+          svg={ringSvg(session.percent, barColor(session.percent, colors), colors.track)}
           style={{ width: ring, height: ring }}
         />
         <FlexWidget style={{ width: ring, height: ring, alignItems: 'center', justifyContent: 'center' }}>
           <TextWidget
-            text={cache.sessionPercent == null ? '—' : `${Math.round(cache.sessionPercent)}%`}
-            style={{ fontSize: Math.round(ring * 0.28), fontWeight: '700', color: barColor(cache.sessionPercent, colors) }}
+            text={session.percent == null ? '—' : `${Math.round(session.percent)}%`}
+            style={{ fontSize: Math.round(ring * 0.28), fontWeight: '700', color: barColor(session.percent, colors) }}
           />
         </FlexWidget>
       </OverlapWidget>
@@ -148,11 +158,13 @@ export function CompactWidget({
 function RingMeter({
   label,
   percent,
+  sinceReset,
   size,
   colors,
 }: {
   label: string;
   percent: number | null;
+  sinceReset: boolean;
   size: number;
   colors: (typeof widgetPalettes)['light'];
 }) {
@@ -169,6 +181,7 @@ function RingMeter({
         </FlexWidget>
       </OverlapWidget>
       <TextWidget text={label} style={{ fontSize: 12, color: colors.ink, marginTop: 4 }} />
+      {sinceReset ? <TextWidget text="since reset" style={{ fontSize: 11, color: colors.muted, marginTop: 1 }} /> : null}
     </FlexWidget>
   );
 }

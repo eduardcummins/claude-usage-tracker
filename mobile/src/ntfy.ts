@@ -3,6 +3,7 @@ import {
   latestSnapshot,
   normalizeServer,
   parseNtfyLines,
+  snapshotRecency,
   topicFromInput,
   type NtfyMessage,
   type Snapshot,
@@ -67,7 +68,7 @@ export function snapshotFromPoll(messages: NtfyMessage[], key = ''): Snapshot | 
       sealed = true;
       continue;
     }
-    const ms = Date.parse(snapshot.fetchedAt);
+    const ms = snapshotRecency(snapshot);
     if (!Number.isFinite(ms) || ms < bestMs) continue;
     best = snapshot;
     bestMs = ms;

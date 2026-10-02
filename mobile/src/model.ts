@@ -21,6 +21,18 @@ export type Snapshot = {
   windows: UsageWindow[];
   extraUsageLabel: string | null;
   recent: HistoryPoint[];
+  status?: string;
+  notice?: string;
+  checkedAt?: string;
+};
+
+export const OPEN_CLAUDE_CODE_NOTE = 'Open Claude Code on your computer to refresh';
+export const SINCE_RESET_NOTE = 'since reset';
+
+export type PresentedWindow = UsageWindow & {
+  displayPercent: number;
+  sinceReset: boolean;
+  sinceResetNote: string | null;
 };
 
 export type NtfyMessage = {
@@ -96,7 +108,7 @@ export function latestSnapshot(messages: NtfyMessage[]): Snapshot | null {
   for (const message of messages) {
     const snapshot = snapshotFromMessage(message.message);
     if (!snapshot) continue;
-    const ms = Date.parse(snapshot.fetchedAt);
+    const ms = snapshotRecency(snapshot);
     if (!Number.isFinite(ms) || ms < bestMs) continue;
     best = snapshot;
     bestMs = ms;
@@ -112,6 +124,50 @@ export function latestAlert(messages: NtfyMessage[]): NtfyMessage | null {
     if (!best || message.time >= best.time) best = message;
   }
   return best;
+}
+
+export function snapshotRecency(snapshot: { fetchedAt: string; checkedAt?: string }): number {
+  const checked = snapshot.checkedAt ? Date.parse(snapshot.checkedAt) : NaN;
+  if (Number.isFinite(checked)) return checked;
+  const fetched = Date.parse(snapshot.fetchedAt);
+  return Number.isFinite(fetched) ? fetched : NaN;
+}
+
+export function presentSnapshot(snapshot: Snapshot, now: number): {
+  waitingNote: string | null;
+  windows: PresentedWindow[];
+} {
+  return {
+    waitingNote: snapshot.status === 'waiting-login' ? OPEN_CLAUDE_CODE_NOTE : null,
+    windows: snapshot.windows.map((window) => presentWindow(window, now)),
+  };
+}
+
+export function presentWindow(window: UsageWindow, now: number): PresentedWindow {
+  const shown = presentPercent(window.usedPercent, window.resetsAt, now);
+  return {
+    ...window,
+    displayPercent: shown.percent ?? 0,
+    sinceReset: shown.sinceReset,
+    sinceResetNote: shown.sinceReset ? SINCE_RESET_NOTE : null,
+  };
+}
+
+export function presentPercent(
+  percent: number | null,
+  resetsAt: string | null,
+  now: number,
+): { percent: number | null; sinceReset: boolean } {
+  if (percent == null) return { percent: null, sinceReset: false };
+  const resetMs = resetsAt ? Date.parse(resetsAt) : NaN;
+  if (Number.isFinite(resetMs) && resetMs <= now) return { percent: 0, sinceReset: true };
+  return { percent, sinceReset: false };
+}
+
+export function resetCaption(resetsAt: string | null, now: number): string {
+  if (!resetsAt) return 'No report yet';
+  const remaining = formatRemaining(resetsAt, now);
+  return Date.parse(resetsAt) <= now ? `${remaining} · since reset` : remaining;
 }
 
 export function formatWhen(iso: string, timeZone = 'Europe/London'): string {
