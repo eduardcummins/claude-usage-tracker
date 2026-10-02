@@ -19,7 +19,7 @@
       "package": "com.eduardcummins.claudeusage",
       "versionCode": 7,
       "adaptiveIcon": {
-        "backgroundColor": "#faf9f5",
+        "backgroundColor": "#F9F7F3",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -67,7 +67,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#faf9f5",
+          "backgroundColor": "#F9F7F3",
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
