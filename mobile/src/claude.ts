@@ -6,13 +6,20 @@ export const TOKEN_URLS = [
   'https://platform.claude.com/v1/oauth/token',
   'https://console.anthropic.com/v1/oauth/token',
 ];
+// Same scope list and order as Claude Code 2.1.287’s claude.ai login.
+// The authorize page rejects a shorter list after sign-in.
 export const SCOPES = [
+  'org:create_api_key',
   'user:profile',
   'user:inference',
   'user:sessions:claude_code',
   'user:mcp_servers',
   'user:file_upload',
+  'user:plugins',
 ];
+
+// Refresh omits org:create_api_key, matching Claude Code’s refresh request.
+export const REFRESH_SCOPES = SCOPES.filter((scope) => scope !== 'org:create_api_key');
 
 const ATTEMPT_MS = 10 * 60 * 1000;
 const USER_AGENT = 'claude-code/2.1.80';
@@ -106,6 +113,7 @@ export function refreshFields(refreshToken: string): Record<string, string> {
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
     client_id: PUBLIC_CLIENT_ID,
+    scope: REFRESH_SCOPES.join(' '),
   };
 }
 
@@ -139,27 +147,76 @@ export function tokenStillValid(expiresAt: number, now: number, skewMs = 120000)
 }
 
 export function redact(value: string): string {
-  return value.replace(/sk-ant-[A-Za-z0-9_-]+/g, '[redacted]').slice(0, 180);
+  return value
+    .replace(/sk-ant-[A-Za-z0-9_-]+/g, '[redacted]')
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .slice(0, 180);
+}
+
+export function formatStageFailure(stage: string, status: number, detail: string): string {
+  const where = status > 0 ? `HTTP ${status}` : 'offline';
+  const clean = redact(detail).replace(/\s+/g, ' ').trim();
+  return clean ? `${stage} failed (${where}): ${clean}` : `${stage} failed (${where}).`;
+}
+
+export function oauthErrorDetail(bodyText: string): string {
+  const trimmed = bodyText.trim();
+  if (!trimmed) return '';
+  try {
+    const fromJson = detailFromJson(JSON.parse(trimmed) as unknown);
+    if (fromJson) return fromJson;
+  } catch {
+    // Response was not JSON; the redacted text is the detail.
+  }
+  return trimmed;
+}
+
+function detailFromJson(body: unknown): string {
+  if (!body || typeof body !== 'object') return '';
+  const record = body as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof record.error === 'string') parts.push(record.error);
+  else if (record.error && typeof record.error === 'object') {
+    const err = record.error as Record<string, unknown>;
+    if (typeof err.type === 'string') parts.push(err.type);
+    if (typeof err.message === 'string') parts.push(err.message);
+  }
+  if (typeof record.error_description === 'string') parts.push(record.error_description);
+  if (typeof record.message === 'string' && parts.length === 0) parts.push(record.message);
+  return parts.join(': ');
+}
+
+export function usageFailureMessage(status: number, body: unknown): string {
+  const raw = body == null ? '' : typeof body === 'string' ? body : JSON.stringify(body);
+  return formatStageFailure('Usage check', status, oauthErrorDetail(raw));
 }
 
 type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 
 export async function requestToken(fetchImpl: FetchLike, fields: Record<string, string>): Promise<unknown> {
-  let lastError = 'Claude did not accept the login.';
+  const stage = fields.grant_type === 'refresh_token' ? 'Login refresh' : 'Sign-in exchange';
+  let lastError = formatStageFailure(stage, 0, 'Claude did not accept the login.');
   for (const url of TOKEN_URLS) {
     const jsonResult = await sendToken(fetchImpl, url, fields, 'json');
     if (jsonResult.ok) return jsonResult.body;
     if (jsonResult.status === 400 || jsonResult.status === 415) {
       const formResult = await sendToken(fetchImpl, url, fields, 'form');
       if (formResult.ok) return formResult.body;
-      if (isRejection(formResult.status)) throw new SignInRejected('Claude rejected the login. Sign in again.');
-      lastError = formResult.message;
+      const status = isRejection(jsonResult.status) ? jsonResult.status : formResult.status;
+      const detail = jsonResult.detail || formResult.detail;
+      const message = rejectionText(stage, status || jsonResult.status, detail);
+      if (isRejection(formResult.status) || isRejection(jsonResult.status)) throw new SignInRejected(message);
+      lastError = formatStageFailure(stage, status || jsonResult.status, detail);
       continue;
     }
-    if (isRejection(jsonResult.status)) throw new SignInRejected('Claude rejected the login. Sign in again.');
-    lastError = jsonResult.message;
+    if (isRejection(jsonResult.status)) throw new SignInRejected(rejectionText(stage, jsonResult.status, jsonResult.detail));
+    lastError = formatStageFailure(stage, jsonResult.status, jsonResult.detail);
   }
   throw new Error(lastError);
+}
+
+function rejectionText(stage: string, status: number, detail: string): string {
+  return `${formatStageFailure(stage, status, detail)} Sign in again.`;
 }
 
 function isRejection(status: number): boolean {
@@ -171,7 +228,7 @@ async function sendToken(
   url: string,
   fields: Record<string, string>,
   kind: 'json' | 'form',
-): Promise<{ ok: true; body: unknown } | { ok: false; status: number; message: string }> {
+): Promise<{ ok: true; body: unknown } | { ok: false; status: number; detail: string }> {
   let response: Response;
   try {
     response = await fetchImpl(url, {
@@ -184,28 +241,30 @@ async function sendToken(
       body: kind === 'json' ? JSON.stringify(fields) : new URLSearchParams(fields).toString(),
     });
   } catch {
-    return { ok: false, status: 0, message: 'The phone could not reach Claude. Check the connection and try again.' };
+    return { ok: false, status: 0, detail: 'The phone could not reach Claude. Check the connection and try again.' };
   }
   const text = await response.text();
   if (!response.ok) {
-    return { ok: false, status: response.status, message: `Claude did not accept the login (${response.status}).` };
+    return { ok: false, status: response.status, detail: oauthErrorDetail(text) };
   }
   try {
     return { ok: true, body: JSON.parse(text) };
   } catch {
-    return { ok: false, status: response.status, message: 'Claude returned a login the app could not read.' };
+    return { ok: false, status: response.status, detail: 'Claude returned a login the app could not read.' };
   }
 }
 
 export async function requestUsage(
   fetchImpl: FetchLike,
   accessToken: string,
-): Promise<{ status: number; body: unknown }> {
+): Promise<{ status: number; body: unknown; detail: string }> {
   let response: Response;
   try {
     response = await fetchImpl(USAGE_URL, { headers: usageHeaders(accessToken) });
   } catch {
-    throw new Error('The phone could not reach Claude. Check the connection and try again.');
+    throw new Error(
+      formatStageFailure('Usage check', 0, 'The phone could not reach Claude. Check the connection and try again.'),
+    );
   }
   const text = await response.text();
   let body: unknown = null;
@@ -214,5 +273,5 @@ export async function requestUsage(
   } catch {
     body = null;
   }
-  return { status: response.status, body };
+  return { status: response.status, body, detail: oauthErrorDetail(text) };
 }

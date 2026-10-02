@@ -2,6 +2,7 @@ import {
   authorizationFields,
   redact,
   refreshFields,
+  formatStageFailure,
   requestToken,
   requestUsage,
   sessionFromToken,
@@ -61,7 +62,7 @@ export async function syncUsage(input: SyncInput): Promise<SyncResult> {
   }
   if (usage.status !== 200 || usage.body == null) {
     return {
-      ...empty(input.scheduled, false, `Claude did not return usage (${usage.status || 'offline'}).`),
+      ...empty(input.scheduled, false, formatStageFailure('Usage check', usage.status, usage.detail)),
       session,
     };
   }
@@ -107,11 +108,11 @@ async function refresh(fetchImpl: FetchLike, session: Session, now: number): Pro
 async function readUsage(
   fetchImpl: FetchLike,
   accessToken: string,
-): Promise<{ status: number; body: unknown; error?: string }> {
+): Promise<{ status: number; body: unknown; detail: string; error?: string }> {
   try {
     return await requestUsage(fetchImpl, accessToken);
   } catch (err) {
-    return { status: 0, body: null, error: message(err) };
+    return { status: 0, body: null, detail: '', error: message(err) };
   }
 }
 

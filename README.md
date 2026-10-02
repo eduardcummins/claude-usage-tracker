@@ -52,7 +52,7 @@ These commands run on a computer, in this project folder. They upload the projec
 
 ### An APK you install yourself
 
-This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `2`.
+This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `3`.
 
 ```bash
 cd mobile
