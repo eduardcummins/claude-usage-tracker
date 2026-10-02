@@ -14,7 +14,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
 import {
   formatAge,
   formatRemaining,
@@ -24,30 +23,32 @@ import {
   zoneLabel,
 } from '../src/model';
 import { ensureBackground } from '../src/register-background';
-import { createLoginAttempt } from '../src/secure-session';
-import { finishSignIn, runSync, signOut } from '../src/sync-runner';
+import { forgetTopic, runSync, saveTopic } from '../src/sync-runner';
 import { barColor, dark, light, Palette } from '../src/theme';
 
 export default function HomeScreen() {
   const colors = useColorScheme() === 'dark' ? dark : light;
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [ready, setReady] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [sample, setSample] = useState(false);
   const [error, setError] = useState('');
-  const [code, setCode] = useState('');
+  const [topic, setTopic] = useState('');
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState('');
-  const [confirmOut, setConfirmOut] = useState(false);
+  const [confirmForget, setConfirmForget] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   const refresh = useCallback(async () => {
     try {
       const outcome = await runSync(true);
-      setSignedIn(!outcome.signedOut);
+      setConnected(outcome.connected);
+      setWaiting(outcome.waiting);
       setSnapshot(outcome.snapshot);
       setError(outcome.error || '');
-      if (!outcome.signedOut) await ensureBackground();
+      if (outcome.connected) await ensureBackground();
       return outcome;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not check usage.');
@@ -71,7 +72,7 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    if (!signedIn) return undefined;
+    if (!connected) return undefined;
     const timer = setInterval(() => {
       void refresh();
     }, 5 * 60 * 1000);
@@ -82,51 +83,42 @@ export default function HomeScreen() {
       clearInterval(timer);
       sub.remove();
     };
-  }, [signedIn, refresh]);
+  }, [connected, refresh]);
 
-  async function openSignIn() {
-    setBusy('browser');
+  async function save() {
+    setBusy('save');
     setError('');
     try {
-      const attempt = await createLoginAttempt();
-      await WebBrowser.openBrowserAsync(attempt.url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not open the sign-in page.');
-    } finally {
-      setBusy('');
-    }
-  }
-
-  async function connect() {
-    setBusy('connect');
-    setError('');
-    try {
-      await finishSignIn(code);
-      setCode('');
+      await saveTopic(topic);
+      setEditing(false);
       setSample(false);
+      setConfirmForget(false);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not connect.');
+      setError(err instanceof Error ? err.message : 'Could not save the topic.');
     } finally {
       setBusy('');
     }
   }
 
-  async function disconnect() {
-    if (!confirmOut) {
-      setConfirmOut(true);
+  async function forget() {
+    if (!confirmForget) {
+      setConfirmForget(true);
       return;
     }
-    setBusy('signout');
+    setBusy('forget');
     setError('');
     try {
-      await signOut();
-      setSignedIn(false);
+      await forgetTopic();
+      setConnected(false);
+      setWaiting(false);
       setSnapshot(null);
       setSample(false);
-      setConfirmOut(false);
+      setTopic('');
+      setEditing(false);
+      setConfirmForget(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not sign out.');
+      setError(err instanceof Error ? err.message : 'Could not forget the topic.');
     } finally {
       setBusy('');
     }
@@ -146,7 +138,7 @@ export default function HomeScreen() {
             contentContainerStyle={styles.page}
             keyboardShouldPersistTaps="handled"
             refreshControl={
-              signedIn && !sample ? (
+              connected && !sample && !editing ? (
                 <RefreshControl
                   refreshing={busy === 'refresh'}
                   tintColor={colors.accent}
@@ -162,50 +154,42 @@ export default function HomeScreen() {
             {sample ? <Text style={styles.banner}>Sample numbers. This is not your account.</Text> : null}
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            {signedIn && !sample && shown ? (
+            {connected && !sample && !editing && shown ? (
               <UsageBody snapshot={shown} now={now} styles={styles} colors={colors} />
             ) : null}
-            {signedIn && !sample && !shown ? (
-              <Text style={styles.lede}>Checking your plan. This takes a moment the first time.</Text>
+            {connected && !sample && !editing && waiting ? (
+              <Text style={styles.lede}>
+                No report yet. The computer sends one about every 10 minutes. Leave the Mac awake.
+              </Text>
             ) : null}
             {sample && shown ? <UsageBody snapshot={shown} now={now} styles={styles} colors={colors} /> : null}
 
-            {!signedIn && !sample ? (
+            {(!connected || editing) && !sample ? (
               <View>
                 <Text style={styles.lede}>
-                  This phone reads your plan usage itself. Sign in once, paste the code the website shows, and the
-                  login stays on this phone.
+                  This phone reads the usage report your computer already publishes. Paste the topic from the Mac
+                  helper. The ntfy app is not needed.
                 </Text>
-                <Text style={styles.step}>1. Tap Open sign-in page. Sign in there if it asks.</Text>
-                <Text style={styles.step}>2. The page shows a code. Copy the whole code, including anything after a #.</Text>
-                <Text style={styles.step}>3. Come back here, paste it, and tap Connect.</Text>
-                <Pressable style={styles.primary} onPress={() => void openSignIn()} disabled={busy !== ''}>
-                  <Text style={styles.primaryLabel}>{busy === 'browser' ? 'Opening…' : 'Open sign-in page'}</Text>
-                </Pressable>
-                <Text style={styles.label}>Code from the sign-in page</Text>
+                <Text style={styles.step}>On the Mac, the topic is the line that starts with “Phone topic”.</Text>
+                <Text style={styles.label}>Topic</Text>
                 <TextInput
-                  value={code}
-                  onChangeText={setCode}
+                  value={topic}
+                  onChangeText={setTopic}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  multiline
-                  nativeID="planpace-code"
-                  placeholder="Paste the code"
+                  nativeID="planpace-topic"
+                  placeholder="Paste the topic"
                   placeholderTextColor={colors.muted}
-                  style={styles.input}
+                  style={styles.topicInput}
                 />
-                <Pressable style={styles.primary} onPress={() => void connect()} disabled={busy !== '' || code.trim() === ''}>
-                  <Text style={styles.primaryLabel}>{busy === 'connect' ? 'Connecting…' : 'Connect'}</Text>
+                <Pressable style={styles.primary} onPress={() => void save()} disabled={busy !== '' || topic.trim() === ''}>
+                  <Text style={styles.primaryLabel}>{busy === 'save' ? 'Saving…' : 'Save'}</Text>
                 </Pressable>
-                <Text style={styles.note}>
-                  The website cannot send you straight back into this app. Pasting the code is the same step the
-                  plan’s own command-line login uses. The code works once and expires after about 10 minutes.
-                </Text>
               </View>
             ) : null}
 
             <View style={styles.actions}>
-              {signedIn && !sample ? (
+              {connected && !sample && !editing ? (
                 <Pressable
                   style={styles.secondary}
                   onPress={() => {
@@ -219,7 +203,7 @@ export default function HomeScreen() {
               ) : null}
               {sample ? (
                 <Pressable style={styles.secondary} onPress={() => setSample(false)}>
-                  <Text style={styles.secondaryLabel}>{signedIn ? 'Back to your plan' : 'Back'}</Text>
+                  <Text style={styles.secondaryLabel}>{connected ? 'Back to your plan' : 'Back'}</Text>
                 </Pressable>
               ) : (
                 <Pressable
@@ -227,19 +211,31 @@ export default function HomeScreen() {
                   onPress={() => {
                     setError('');
                     setSample(true);
+                    setEditing(false);
                   }}
                 >
                   <Text style={styles.textButtonLabel}>See sample numbers</Text>
                 </Pressable>
               )}
-              {signedIn ? (
-                <Pressable style={styles.textButton} onPress={() => void disconnect()} disabled={busy === 'signout'}>
+              {connected && !editing ? (
+                <Pressable
+                  style={styles.textButton}
+                  onPress={() => {
+                    setConfirmForget(false);
+                    setEditing(true);
+                  }}
+                >
+                  <Text style={styles.textButtonLabel}>Change topic</Text>
+                </Pressable>
+              ) : null}
+              {connected ? (
+                <Pressable style={styles.textButton} onPress={() => void forget()} disabled={busy === 'forget'}>
                   <Text style={styles.textButtonLabel}>
-                    {busy === 'signout'
-                      ? 'Signing out…'
-                      : confirmOut
-                        ? 'Tap again to delete the login from this phone'
-                        : 'Sign out'}
+                    {busy === 'forget'
+                      ? 'Removing…'
+                      : confirmForget
+                        ? 'Tap again to remove the topic from this phone'
+                        : 'Remove topic'}
                   </Text>
                 </Pressable>
               ) : null}
@@ -248,13 +244,13 @@ export default function HomeScreen() {
             {Platform.OS === 'android' ? (
               <Text style={styles.note}>
                 Home screen widget: long-press the home screen, tap Widgets, and add Plan Pace. It shows the 5-hour
-                and weekly percents. Add it after you have connected, then open the app once so the widget fills in.
+                and weekly percents. Add it after you have saved a topic, then open the app once so the widget fills in.
               </Text>
             ) : null}
             <Text style={styles.note}>
-              The phone checks again in the background, usually every 15 minutes or longer. The phone decides the
-              exact time. Opening the app checks immediately. A notification is also set for each reset time. Allow
-              notifications
+              The phone checks the saved topic again in the background, usually every 15 minutes or longer. The phone
+              decides the exact time. Opening the app checks immediately. A notification is also set for each reset
+              time. Allow notifications
               {Platform.OS === 'android' ? ', and on Android 12 or newer allow Alarms & reminders for Plan Pace' : ''}.
             </Text>
             <Text style={styles.footer}>Plan Pace is not affiliated with Anthropic.</Text>
@@ -277,14 +273,17 @@ function UsageBody({
   colors: Palette;
 }) {
   const ageMs = now - Date.parse(snapshot.fetchedAt);
-  const stale = Number.isFinite(ageMs) && ageMs > 45 * 60 * 1000;
+  const stale = Number.isFinite(ageMs) && ageMs > 30 * 60 * 1000;
   const zone = snapshot.timeZone || 'Europe/London';
   return (
     <View>
       <Text style={styles.updated}>
         Updated {formatAge(snapshot.fetchedAt, now)} · {formatWhen(snapshot.fetchedAt, zone)}
       </Text>
-      {stale ? <Text style={styles.stale}>This report is old. Open the app with a connection, or tap Check now.</Text> : null}
+      {snapshot.plan ? <Text style={styles.plan}>{snapshot.plan}</Text> : null}
+      {stale ? (
+        <Text style={styles.stale}>These numbers are old. The Mac may be asleep.</Text>
+      ) : null}
       {snapshot.windows.map((window) => {
         const percent = Math.max(0, Math.min(100, window.usedPercent));
         return (
@@ -340,17 +339,15 @@ function makeStyles(colors: Palette) {
     lede: { fontSize: 17, lineHeight: 24, color: colors.text, marginTop: 10 },
     step: { fontSize: 16, lineHeight: 22, color: colors.text, marginTop: 8 },
     label: { fontSize: 14, color: colors.muted, marginTop: 16, marginBottom: 6 },
-    input: {
+    topicInput: {
       borderWidth: 1,
       borderColor: colors.line,
       backgroundColor: colors.card,
       borderRadius: 12,
       paddingHorizontal: 12,
       paddingVertical: 12,
-      minHeight: 88,
       fontSize: 16,
       color: colors.text,
-      textAlignVertical: 'top',
     },
     primary: {
       backgroundColor: colors.accent,
@@ -390,6 +387,7 @@ function makeStyles(colors: Palette) {
       marginTop: 12,
       fontSize: 15,
     },
+    plan: { color: colors.text, marginTop: 8, fontSize: 16, fontWeight: '600' },
     updated: { color: colors.muted, marginTop: 10, fontSize: 14 },
     stale: { color: colors.warn, marginTop: 8, fontSize: 15, lineHeight: 20 },
     card: {

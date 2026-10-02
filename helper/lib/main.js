@@ -133,10 +133,9 @@ async function initConfig(deps, args) {
 function printTopic(deps, config) {
   deps.log('');
   deps.log(`Phone topic: ${config.ntfyTopic}`);
-  deps.log(`Alert topic URL: ${config.ntfyServer}/${config.ntfyTopic}`);
+  deps.log(`Usage updates are published to ${config.ntfyServer}/${dataTopic(config.ntfyTopic)}`);
   deps.log('');
-  deps.log('On the phone, in the ntfy app, subscribe to that topic on ntfy.sh.');
-  deps.log('In the Claude Usage app, paste the same topic.');
+  deps.log('On the phone, open Plan Pace and paste the phone topic. The ntfy app is not required.');
   deps.log('Treat the topic like a password. Anyone who knows it can see usage percentages.');
 }
 
@@ -152,7 +151,7 @@ async function sendTestAlert(deps) {
     token: config.ntfyToken,
     fetch: deps.fetch,
   });
-  deps.log('Sent a test alert. It should arrive in the ntfy app, and in Claude Usage if that app is open.');
+  deps.log('Sent a test alert to the phone topic. Plan Pace reads usage from the matching -data topic.');
   return 0;
 }
 

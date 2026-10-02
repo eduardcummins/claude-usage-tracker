@@ -25,7 +25,7 @@ export function UsageWidget({ cache }: { cache: WidgetCache }) {
         </FlexWidget>
       ) : (
         <TextWidget
-          text="Open Plan Pace and sign in."
+          text="Open Plan Pace and paste your topic."
           style={{ fontSize: 16, color: '#141413' }}
         />
       )}

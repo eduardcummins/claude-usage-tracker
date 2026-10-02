@@ -1,37 +1,32 @@
 import { cancelResetAlarms, notifyLocal, syncResetAlarms } from './alerts';
+import { isValidTopic } from './model';
+import type { Snapshot } from './model';
+import { fetchLatestSnapshot, settingsFromInput } from './ntfy';
 import { stopBackground } from './register-background';
-import { assertAttemptFresh, parseAuthorizationPaste } from './claude';
-import type { Snapshot, UsageWindow } from './model';
-import {
-  clearLoginAttempt,
-  clearSession,
-  loadLoginAttempt,
-  loadSession,
-  saveSession,
-} from './secure-session';
-import { exchangeCode, syncUsage } from './sync';
 import {
   WidgetCache,
   clearPlanData,
   emptyWidget,
-  loadHistory,
   loadScheduled,
+  loadSettings,
   loadSnapshot,
   loadWidgetCache,
   loadWindows,
-  saveHistory,
   saveScheduled,
+  saveSettings,
   saveSnapshot,
   saveWidgetCache,
   saveWindows,
 } from './storage';
-import { buildSnapshot } from './usage';
+import { planAlarms, resetNotification } from './usage';
+import { widgetFromSnapshot } from './widget-data';
 import { pushWidget } from './widget-update';
 
 export type SyncOutcome = {
   snapshot: Snapshot | null;
   error: string | null;
-  signedOut: boolean;
+  connected: boolean;
+  waiting: boolean;
   widget: WidgetCache;
 };
 
@@ -45,109 +40,74 @@ export function runSync(updateWidget = true): Promise<SyncOutcome> {
   return inflight;
 }
 
-export async function finishSignIn(paste: string): Promise<void> {
-  const attempt = await loadLoginAttempt();
-  if (!attempt) throw new Error('Open the sign-in page again.');
-  const now = Date.now();
-  assertAttemptFresh(attempt.createdAt, now);
-  const { code } = parseAuthorizationPaste(paste, attempt.state);
-  const session = await exchangeCode(fetch, code, attempt, now);
-  await saveSession(session);
-  await clearLoginAttempt();
+export async function saveTopic(raw: string): Promise<void> {
+  const settings = settingsFromInput(raw);
+  if (!isValidTopic(settings.topic)) {
+    throw new Error('Paste the topic from the computer. It uses letters, numbers, hyphens, or underscores.');
+  }
+  await saveSettings(settings.topic, settings.server);
+}
+
+export async function forgetTopic(): Promise<void> {
+  await stopBackground();
+  await cancelResetAlarms();
+  await saveSettings('', 'https://ntfy.sh');
+  await clearPlanData();
+  await saveWidgetCache(emptyWidget);
+  await pushWidget(emptyWidget);
 }
 
 async function runSyncOnce(updateWidget: boolean): Promise<SyncOutcome> {
-  const [session, previousWindows, scheduled, history, saved] = await Promise.all([
-    loadSession(),
+  const settings = await loadSettings();
+  if (!settings.topic) {
+    return finish(emptyWidget, null, null, false, false, updateWidget);
+  }
+  const [previousWindows, scheduled, saved] = await Promise.all([
     loadWindows(),
     loadScheduled(),
-    loadHistory(),
     loadSnapshot(),
   ]);
-  if (!session) {
-    return finish(emptyWidget, null, null, true, updateWidget);
+  let snapshot = saved;
+  let error: string | null = null;
+  try {
+    const latest = await fetchLatestSnapshot(fetch, settings.server, settings.topic);
+    if (latest) {
+      snapshot = latest;
+      const alarms = planAlarms({
+        previous: previousWindows,
+        next: latest.windows,
+        scheduled,
+        now: Date.now(),
+      });
+      await Promise.all([
+        saveSnapshot(latest),
+        saveWindows(latest.windows),
+        saveScheduled(alarms.scheduled),
+      ]);
+      await syncResetAlarms(latest.windows);
+      if (alarms.notify.length > 0) {
+        const note = resetNotification(alarms.notify);
+        await notifyLocal(note.title, note.body);
+      }
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : 'Could not read the topic.';
   }
-  const now = Date.now();
-  const result = await syncUsage({
-    fetch,
-    now,
-    session,
-    previousWindows,
-    scheduled,
-  });
-  if (result.signedOut) {
-    await clearSession();
-    return finish(emptyWidget, null, result.error, true, updateWidget);
-  }
-  if (result.session) await saveSession(result.session);
-  await saveScheduled(result.scheduled);
-  if (!result.windows) {
-    const widget = widgetFrom(saved, true);
-    return finish(widget, saved, result.error, false, updateWidget);
-  }
-  const built = buildSnapshot({
-    fetchedAt: new Date(now).toISOString(),
-    plan: null,
-    timeZone: deviceZone(),
-    windows: result.windows,
-    extraUsageLabel: result.extraUsageLabel,
-    history,
-  });
-  await Promise.all([
-    saveHistory(built.history),
-    saveWindows(result.windows),
-    saveSnapshot(built.snapshot),
-  ]);
-  await syncResetAlarms(result.windows);
-  if (result.notify) await notifyLocal(result.notify.title, result.notify.body);
-  return finish(widgetFrom(built.snapshot, true), built.snapshot, result.error, false, updateWidget);
+  const waiting = snapshot == null && error == null;
+  return finish(widgetFromSnapshot(snapshot, true), snapshot, error, true, waiting, updateWidget);
 }
 
 async function finish(
   widget: WidgetCache,
   snapshot: Snapshot | null,
   error: string | null,
-  signedOut: boolean,
+  connected: boolean,
+  waiting: boolean,
   updateWidget: boolean,
 ): Promise<SyncOutcome> {
   await saveWidgetCache(widget);
   if (updateWidget) await pushWidget(widget);
-  return { snapshot, error, signedOut, widget };
-}
-
-function widgetFrom(snapshot: Snapshot | null, signedIn: boolean): WidgetCache {
-  const session = findWindow(snapshot?.windows, 'session');
-  const weekly = findWindow(snapshot?.windows, 'weekly');
-  return {
-    signedIn,
-    plan: snapshot?.plan ?? null,
-    sessionPercent: session?.usedPercent ?? null,
-    sessionReset: session?.resetsAt ?? null,
-    weeklyPercent: weekly?.usedPercent ?? null,
-    weeklyReset: weekly?.resetsAt ?? null,
-    fetchedAt: snapshot?.fetchedAt ?? null,
-  };
-}
-
-function findWindow(windows: UsageWindow[] | undefined, id: string): UsageWindow | undefined {
-  return windows?.find((window) => window.id === id);
-}
-
-function deviceZone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/London';
-  } catch {
-    return 'Europe/London';
-  }
-}
-
-export async function signOut(): Promise<void> {
-  await stopBackground();
-  await cancelResetAlarms();
-  await clearSession();
-  await clearPlanData();
-  await saveWidgetCache(emptyWidget);
-  await pushWidget(emptyWidget);
+  return { snapshot, error, connected, waiting, widget };
 }
 
 export async function cachedWidget(): Promise<WidgetCache> {
