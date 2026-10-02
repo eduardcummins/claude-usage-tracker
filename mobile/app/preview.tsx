@@ -6,6 +6,7 @@ import { sampleSnapshot } from '../src/model';
 import { SetupFlow } from '../src/setup-view';
 import { dark, light, Palette } from '../src/theme';
 import { UsageHome } from '../src/usage-view';
+import { barColor, barSegments, widgetMetrics, widgetPalettes, type WidgetScheme } from '../src/widget-layout';
 
 export default function PreviewScreen() {
   const params = useLocalSearchParams<{ screen?: string; scheme?: string }>();
@@ -34,7 +35,7 @@ function PreviewBody({ screen, colors }: { screen: string; colors: Palette }) {
   };
   const stale = { ...fresh, fetchedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString() };
   if (screen === 'widget') {
-    return <WidgetCard />;
+    return <WidgetCard scheme={colors === dark ? 'dark' : 'light'} />;
   }
   if (screen === 'welcome') {
     return <SetupPreview colors={colors} step={0} />;
@@ -116,30 +117,92 @@ function PreviewBody({ screen, colors }: { screen: string; colors: Palette }) {
   );
 }
 
-function WidgetCard() {
+function WidgetCard({ scheme }: { scheme: WidgetScheme }) {
+  const colors = widgetPalettes[scheme];
+  const metrics = widgetMetrics(320, 180);
+  const inner = 320 - metrics.padX * 2;
   return (
-    <View style={widget.card}>
+    <View
+      style={{
+        backgroundColor: colors.bg,
+        borderRadius: metrics.radius,
+        paddingHorizontal: metrics.padX,
+        paddingVertical: metrics.padY,
+        marginTop: 24,
+        width: 320,
+        alignSelf: 'center',
+      }}
+    >
       <View style={widget.row}>
-        <Text style={widget.brand}>Plan Pace</Text>
-        <Text style={widget.plan}>Pro</Text>
+        <Text style={{ color: colors.muted, fontSize: metrics.title }}>Plan Pace</Text>
+        <Text style={{ color: colors.accent, fontSize: metrics.title }}>Pro</Text>
       </View>
-      <Meter label="5-hour" percent={16} when="resets in 2h 14m" />
-      <Meter label="Weekly" percent={13} when="resets in 3d" />
+      <PreviewMeter label="5-hour" percent={16} when="resets in 3h 12m" inner={inner} scheme={scheme} />
+      <PreviewMeter label="Weekly" percent={13} when="resets in 4d 2h" inner={inner} scheme={scheme} />
     </View>
   );
 }
 
-function Meter({ label, percent, when }: { label: string; percent: number; when: string }) {
+function PreviewMeter({
+  label,
+  percent,
+  when,
+  inner,
+  scheme,
+}: {
+  label: string;
+  percent: number;
+  when: string;
+  inner: number;
+  scheme: WidgetScheme;
+}) {
+  const colors = widgetPalettes[scheme];
+  const metrics = widgetMetrics(320, 180);
+  const color = barColor(percent, colors);
+  const parts = barSegments(inner, percent, metrics.thumb);
+  const left = Math.round(parts.left);
+  const right = Math.max(0, inner - left - metrics.thumb);
   return (
-    <View style={widget.meter}>
+    <View style={{ marginTop: metrics.gap }}>
       <View style={widget.row}>
-        <Text style={widget.label}>{label}</Text>
-        <Text style={widget.percent}>{percent}%</Text>
+        <Text style={{ color: colors.ink, fontSize: metrics.label }}>{label}</Text>
+        <Text style={{ color, fontSize: metrics.percent, fontWeight: '700' }}>{percent}%</Text>
       </View>
-      <View style={widget.track}>
-        <View style={[widget.fill, { width: `${percent}%` }]} />
+      <View style={{ flexDirection: 'row', width: inner, height: metrics.thumb, alignItems: 'center', marginTop: 5 }}>
+        {left > 0 ? (
+          <View
+            style={{
+              width: left,
+              height: metrics.bar,
+              backgroundColor: color,
+              borderTopLeftRadius: metrics.bar,
+              borderBottomLeftRadius: metrics.bar,
+            }}
+          />
+        ) : null}
+        <View
+          style={{
+            width: metrics.thumb,
+            height: metrics.thumb,
+            borderRadius: metrics.thumb / 2,
+            backgroundColor: color,
+            borderWidth: 2,
+            borderColor: colors.bg,
+          }}
+        />
+        {right > 0 ? (
+          <View
+            style={{
+              width: right,
+              height: metrics.bar,
+              backgroundColor: colors.track,
+              borderTopRightRadius: metrics.bar,
+              borderBottomRightRadius: metrics.bar,
+            }}
+          />
+        ) : null}
       </View>
-      <Text style={widget.when}>{when}</Text>
+      <Text style={{ color: colors.muted, fontSize: metrics.meta, marginTop: 4 }}>{when}</Text>
     </View>
   );
 }
@@ -167,23 +230,7 @@ function SetupPreview({ colors, step }: { colors: Palette; step: number }) {
 }
 
 const widget = StyleSheet.create({
-  card: {
-    backgroundColor: '#faf9f5',
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e7e2d8',
-    marginTop: 24,
-  },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { color: '#6b6a64', fontSize: 13 },
-  plan: { color: '#c96442', fontSize: 13 },
-  meter: { marginTop: 12 },
-  label: { color: '#141413', fontSize: 16 },
-  percent: { color: '#c96442', fontSize: 22, fontWeight: '700' },
-  track: { height: 8, backgroundColor: '#efeae1', borderRadius: 8, marginTop: 6, overflow: 'hidden' },
-  fill: { height: 8, backgroundColor: '#c96442', borderRadius: 8 },
-  when: { color: '#6b6a64', fontSize: 13, marginTop: 4 },
 });
 
 const styles = StyleSheet.create({

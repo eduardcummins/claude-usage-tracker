@@ -24,7 +24,7 @@ Session and weekly plan usage, and when each limit resets.
 ## Full description
 
 ```text
-Plan Pace shows two rings: the 5-hour session and the weekly limit. Each one shows the percent used, a countdown, and the reset time in your local time. You can get a notification when a limit resets. On Android, a home screen widget shows both.
+Plan Pace shows two rings: the 5-hour session and the weekly limit. Each one shows the percent used, a countdown, and the reset time in your local time. You can get a notification when a limit resets. On Android, a home screen widget shows a horizontal bar for each, with a marker at the current percent and the reset countdown.
 
 The phone does not sign in. A small helper on your Mac or Windows computer reads the plan you already use there and publishes the percentages. The app’s first screen gives you one command to copy. It installs the helper and prints a topic. Paste that topic, or scan the QR code. The ntfy app is not required.
 
@@ -53,7 +53,15 @@ Play asks for at least two phone screenshots. Use 1080×1920 PNG files. Rendered
 4. `phone-install.png` — the copy-paste helper command.
 5. `feature-graphic.png` — 1024×500 feature graphic.
 
-The same folder also has `phone-topic.png`, `phone-stale.png`, `phone-waiting.png`, `phone-error.png`, `phone-help.png`, and `widget-card.png`. Phone shots are 1080×1920.
+The same folder also has `phone-topic.png`, `phone-stale.png`, `phone-waiting.png`, `phone-error.png`, and `phone-help.png`. Phone shots are 1080×1920.
+
+Home screen widget renders, light and dark, with the marker on each bar:
+
+- `widget-250x140-light.png` and `widget-250x140-dark.png` — the smallest size, 250×140 dp.
+- `widget-320x140-light.png` and `widget-320x140-dark.png` — a common 4×2 size. `widget-card.png` is the light copy.
+- `widget-420x180-light.png` and `widget-420x180-dark.png` — a wider, taller size.
+
+Each file is the widget at 3× with a margin so the rounded corners are visible. The Android widget picker image is `mobile/assets/widget-preview.png`.
 
 Leave the words Claude and Anthropic out of the images except where the in-app footer already says the app is not affiliated. Crop above that line if a screenshot must avoid the name.
 

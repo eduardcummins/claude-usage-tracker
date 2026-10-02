@@ -38,7 +38,7 @@
     "build:android": "npx eas-cli@latest build --platform android --profile preview",
     "build:play": "npx eas-cli@latest build --platform android --profile production",
     "build:ios": "npx eas-cli@latest build --platform ios --profile production --auto-submit",
-    "test": "node --experimental-strip-types --test src/model.test.ts src/ntfy.test.ts src/ntfy.live.test.ts src/usage.test.ts src/install-commands.test.ts plugins/without-push-entitlement.test.js plugins/without-microphone.test.js"
+    "test": "node --experimental-strip-types --test src/model.test.ts src/ntfy.test.ts src/ntfy.live.test.ts src/usage.test.ts src/install-commands.test.ts src/widget-layout.test.ts plugins/without-push-entitlement.test.js plugins/without-microphone.test.js"
   },
   "private": true
 }

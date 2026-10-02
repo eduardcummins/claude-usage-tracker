@@ -10,7 +10,10 @@ export async function pushWidget(cache: WidgetCache): Promise<void> {
     const { UsageWidget } = require('./widget-view') as typeof import('./widget-view');
     await requestWidgetUpdate({
       widgetName: 'PlanPace',
-      renderWidget: () => UsageWidget({ cache }),
+      renderWidget: (info) => ({
+        light: UsageWidget({ cache, width: info.width, height: info.height, scheme: 'light' }),
+        dark: UsageWidget({ cache, width: info.width, height: info.height, scheme: 'dark' }),
+      }),
     });
   } catch {
     // No widget on the home screen, or this is a build without the widget module.

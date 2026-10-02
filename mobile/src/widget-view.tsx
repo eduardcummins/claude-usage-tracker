@@ -1,14 +1,30 @@
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 import { formatRemaining } from './model';
 import type { WidgetCache } from './storage';
+import {
+  barColor,
+  barSegments,
+  widgetMetrics,
+  widgetPalettes,
+  type WidgetScheme,
+} from './widget-layout';
 
-const cream = '#faf9f5';
-const ink = '#141413';
-const muted = '#6b6a64';
-const accent = '#c96442';
-const track = '#efeae1';
-
-export function UsageWidget({ cache, now = Date.now() }: { cache: WidgetCache; now?: number }) {
+export function UsageWidget({
+  cache,
+  width = 320,
+  height = 140,
+  scheme = 'light',
+  now = Date.now(),
+}: {
+  cache: WidgetCache;
+  width?: number;
+  height?: number;
+  scheme?: WidgetScheme;
+  now?: number;
+}) {
+  const colors = widgetPalettes[scheme];
+  const metrics = widgetMetrics(width, height);
+  const inner = Math.max(48, width - metrics.padX * 2);
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -16,24 +32,54 @@ export function UsageWidget({ cache, now = Date.now() }: { cache: WidgetCache; n
       style={{
         height: 'match_parent',
         width: 'match_parent',
+        backgroundColor: colors.bg,
+        borderRadius: metrics.radius,
+        paddingHorizontal: metrics.padX,
+        paddingVertical: metrics.padY,
         flexDirection: 'column',
-        backgroundColor: cream,
-        borderRadius: 22,
-        padding: 14,
-        justifyContent: 'space-between',
       }}
     >
-      <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', justifyContent: 'space-between', alignItems: 'center' }}>
-        <TextWidget text="Plan Pace" style={{ fontSize: 13, color: muted }} />
-        <TextWidget text={cache.plan || ''} style={{ fontSize: 13, color: accent }} />
+      <FlexWidget
+        style={{
+          flexDirection: 'row',
+          width: 'match_parent',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <TextWidget text="Plan Pace" style={{ fontSize: metrics.title, color: colors.muted }} />
+        <TextWidget text={cache.plan || ''} style={{ fontSize: metrics.title, color: colors.accent }} />
       </FlexWidget>
       {cache.signedIn ? (
-        <FlexWidget style={{ flexDirection: 'column', width: 'match_parent', flexGap: 10 }}>
-          <Meter label="5-hour" percent={cache.sessionPercent} reset={cache.sessionReset} now={now} />
-          <Meter label="Weekly" percent={cache.weeklyPercent} reset={cache.weeklyReset} now={now} />
+        <FlexWidget
+          style={{
+            flexDirection: 'column',
+            width: 'match_parent',
+            flex: 1,
+            justifyContent: 'space-evenly',
+          }}
+        >
+          <Meter
+            label="5-hour"
+            percent={cache.sessionPercent}
+            when={cache.sessionReset ? formatRemaining(cache.sessionReset, now) : 'No report yet'}
+            inner={inner}
+            metrics={metrics}
+            colors={colors}
+          />
+          <Meter
+            label="Weekly"
+            percent={cache.weeklyPercent}
+            when={cache.weeklyReset ? formatRemaining(cache.weeklyReset, now) : 'No report yet'}
+            inner={inner}
+            metrics={metrics}
+            colors={colors}
+          />
         </FlexWidget>
       ) : (
-        <TextWidget text="Add your topic in Plan Pace." style={{ fontSize: 16, color: ink }} />
+        <FlexWidget style={{ flex: 1, justifyContent: 'center', width: 'match_parent' }}>
+          <TextWidget text="Add your topic in Plan Pace." style={{ fontSize: metrics.label, color: colors.ink }} />
+        </FlexWidget>
       )}
     </FlexWidget>
   );
@@ -42,28 +88,88 @@ export function UsageWidget({ cache, now = Date.now() }: { cache: WidgetCache; n
 function Meter({
   label,
   percent,
-  reset,
-  now,
+  when,
+  inner,
+  metrics,
+  colors,
 }: {
   label: string;
   percent: number | null;
-  reset: string | null;
-  now: number;
+  when: string;
+  inner: number;
+  metrics: ReturnType<typeof widgetMetrics>;
+  colors: (typeof widgetPalettes)['light'];
 }) {
-  const value = percent == null ? '—' : `${percent}%`;
-  const when = reset ? formatRemaining(reset, now) : 'No report yet';
-  const used = percent == null ? 0 : Math.max(0, Math.min(100, percent));
+  const color = barColor(percent, colors);
+  const parts = barSegments(inner, percent, metrics.thumb);
+  const left = Math.round(parts.left);
+  const marker = parts.showMarker ? metrics.thumb : 0;
+  const right = Math.max(0, inner - left - marker);
+  const value = percent == null ? '—' : `${Math.round(percent)}%`;
+  const empty = percent == null;
   return (
-    <FlexWidget style={{ flexDirection: 'column', width: 'match_parent', flexGap: 3 }}>
-      <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', justifyContent: 'space-between', alignItems: 'center' }}>
-        <TextWidget text={label} style={{ fontSize: 14, color: ink }} />
-        <TextWidget text={value} style={{ fontSize: 20, color: accent }} />
+    <FlexWidget style={{ flexDirection: 'column', width: 'match_parent' }}>
+      <FlexWidget
+        style={{
+          flexDirection: 'row',
+          width: 'match_parent',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <TextWidget text={label} style={{ fontSize: metrics.label, color: colors.ink }} />
+        <TextWidget
+          text={value}
+          style={{ fontSize: metrics.percent, fontWeight: '700', color: empty ? colors.muted : color }}
+        />
       </FlexWidget>
-      <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', height: 7, backgroundColor: track, borderRadius: 8 }}>
-        <FlexWidget style={{ flex: Math.max(used, 0.01), height: 7, backgroundColor: used >= 90 ? '#9c3b32' : accent, borderRadius: 8 }} />
-        <FlexWidget style={{ flex: Math.max(100 - used, 0.01), height: 7, backgroundColor: track }} />
+      <FlexWidget
+        style={{
+          flexDirection: 'row',
+          width: inner,
+          height: metrics.thumb,
+          alignItems: 'center',
+          marginTop: 5,
+        }}
+      >
+        {left > 0 ? (
+          <FlexWidget
+            style={{
+              width: left,
+              height: metrics.bar,
+              backgroundColor: color,
+              borderTopLeftRadius: metrics.bar,
+              borderBottomLeftRadius: metrics.bar,
+            }}
+          />
+        ) : null}
+        {parts.showMarker ? (
+          <FlexWidget
+            style={{
+              width: metrics.thumb,
+              height: metrics.thumb,
+              borderRadius: metrics.thumb / 2,
+              backgroundColor: color,
+              borderWidth: 2,
+              borderColor: colors.bg,
+            }}
+          />
+        ) : null}
+        {right > 0 ? (
+          <FlexWidget
+            style={{
+              width: right,
+              height: metrics.bar,
+              backgroundColor: colors.track,
+              borderTopRightRadius: metrics.bar,
+              borderBottomRightRadius: metrics.bar,
+              borderTopLeftRadius: left === 0 && !parts.showMarker ? metrics.bar : 0,
+              borderBottomLeftRadius: left === 0 && !parts.showMarker ? metrics.bar : 0,
+            }}
+          />
+        ) : null}
       </FlexWidget>
-      <TextWidget text={when} style={{ fontSize: 12, color: muted }} />
+      <TextWidget text={when} style={{ fontSize: metrics.meta, color: colors.muted, marginTop: 4 }} />
     </FlexWidget>
   );
 }

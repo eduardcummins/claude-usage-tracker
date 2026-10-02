@@ -52,7 +52,7 @@ On Android 12 and newer, exact alarms need a setting: **Settings → Apps → Pl
 3. Tap **Widgets**.
 4. Add **Plan Pace**.
 
-The widget shows the 5-hour percent and the weekly percent, with the reset times. Tapping it opens the app. It updates when the app checks, and Android may also refresh it about every 30 minutes.
+The widget shows a horizontal bar for the 5-hour session and one for the weekly limit. A marker sits at the current percent, and each bar has the percent and the reset countdown. It follows the phone’s light or dark theme. Tapping it opens the app. It updates when the app checks, and Android may also refresh it about every 30 minutes.
 
 There is no iPhone widget in this version.
 
