@@ -62,6 +62,7 @@ When a 5-hour or weekly limit resets, it sends an alert.
       Publish sample usage, then a sample reset. Use this to test the phone.
 
 Windows background setup:  powershell -ExecutionPolicy Bypass -File helper\\install-windows.ps1
+Windows remove everything: powershell -ExecutionPolicy Bypass -File helper\\uninstall-windows.ps1
 Linux background setup:    bash helper/install-linux.sh
 `;
 
