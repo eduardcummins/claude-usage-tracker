@@ -1,12 +1,14 @@
 export type WidgetScheme = 'light' | 'dark';
 
+type Hex = `#${string}`;
+
 export type WidgetPalette = {
-  bg: string;
-  ink: string;
-  muted: string;
-  accent: string;
-  track: string;
-  danger: string;
+  bg: Hex;
+  ink: Hex;
+  muted: Hex;
+  accent: Hex;
+  track: Hex;
+  danger: Hex;
 };
 
 export type WidgetMetrics = {
@@ -58,7 +60,7 @@ export function widgetMetrics(width: number, height: number): WidgetMetrics {
   };
 }
 
-export function barColor(percent: number | null, colors: WidgetPalette): string {
+export function barColor(percent: number | null, colors: WidgetPalette): Hex {
   if (percent != null && percent >= 90) return colors.danger;
   return colors.accent;
 }
