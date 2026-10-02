@@ -38,5 +38,5 @@ rm -f "$ARCHIVE"
 node "$ROOT/helper/cli.js" --init
 node "$ROOT/helper/cli.js" install-mac
 echo ""
-echo "Leave this Mac awake. Cluse on the phone reads a new report about every 10 minutes."
+echo "Done. Cluse works whenever this Mac is awake: it checks about every 10 minutes and lets you know when your limits reset."
 echo "Scan the pairing code in Cluse. A topic that starts with cu- still works."

@@ -48,7 +48,6 @@ export function UsageWidget({
         }}
       >
         <TextWidget text="Cluse" style={{ fontSize: metrics.title, color: colors.muted }} />
-        <TextWidget text={cache.plan || ''} style={{ fontSize: metrics.title, color: colors.accent }} />
       </FlexWidget>
       {cache.signedIn ? (
         <FlexWidget

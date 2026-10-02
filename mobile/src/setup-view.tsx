@@ -58,15 +58,15 @@ export function SetupFlow({
 
       {step === 0 ? (
         <View>
-          <Text style={styles.title}>Your plan, on your phone</Text>
+          <Text style={styles.title}>Your Claude limits, on your phone</Text>
           <Text style={styles.lede}>
-            Cluse shows how much of the 5-hour session and the weekly limit is used, and when each one resets.
+            Cluse shows how much of your 5-hour and weekly Claude limits you've used, and lets you know when they reset.
           </Text>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No Claude login on this phone</Text>
             <Text style={styles.body}>
-              A small helper on your computer reads the plan you already use there. This phone only receives the
-              percentages. It does not see chats or files.
+              A small helper on your computer reads the usage from the Claude Code login already there. This phone
+              only receives the percentages. It does not see chats or files.
             </Text>
           </View>
         </View>
@@ -75,7 +75,7 @@ export function SetupFlow({
       {step === 1 ? (
         <View>
           <Text style={styles.title}>Install the helper</Text>
-          <Text style={styles.lede}>On the computer where you use the plan, copy one command and run it.</Text>
+          <Text style={styles.lede}>On the computer where you use Claude Code, copy this command and run it.</Text>
           <View style={styles.segment}>
             <Pressable
               style={[styles.segmentItem, computer === 'mac' ? styles.segmentOn : null]}
@@ -90,7 +90,14 @@ export function SetupFlow({
               <Text style={[styles.segmentLabel, computer === 'windows' ? styles.segmentLabelOn : null]}>Windows</Text>
             </Pressable>
           </View>
-          <Text style={styles.hint}>{computer === 'mac' ? 'Terminal' : 'PowerShell'}</Text>
+          <Text style={styles.step}>
+            {computer === 'mac' ? 'Run this command in Terminal' : 'Run this command in PowerShell'}
+          </Text>
+          <Text style={styles.hintTight}>
+            {computer === 'mac'
+              ? 'Open Terminal (Applications › Utilities, or search Terminal in Spotlight), paste the command, and press Return.'
+              : 'Open PowerShell (search PowerShell in the Start menu), paste the command, and press Enter.'}
+          </Text>
           <Text selectable style={styles.command}>
             {command}
           </Text>
@@ -98,8 +105,9 @@ export function SetupFlow({
             <Text style={styles.secondaryLabel}>{copied ? 'Copied' : 'Copy command'}</Text>
           </Pressable>
           <Text style={styles.note}>
-            Node.js 20 or newer is required. The command downloads the helper, checks about every 10 minutes, and
-            prints a topic plus a QR code. Leave the computer awake.
+            Node.js 20 or newer is required. The command installs the helper and prints a pairing code plus a QR code.
+            After that it works on its own whenever your computer is awake, checks about every 10 minutes, and lets
+            you know when your limits reset.
           </Text>
         </View>
       ) : null}
@@ -143,7 +151,7 @@ export function SetupFlow({
         ) : null}
         {step < 2 ? (
           <Pressable style={styles.primary} onPress={onNext}>
-            <Text style={styles.primaryLabel}>{step === 1 ? 'I have the topic' : 'Continue'}</Text>
+            <Text style={styles.primaryLabel}>{step === 1 ? 'I have the pairing code' : 'Continue'}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -244,6 +252,21 @@ function makeStyles(colors: Palette) {
       fontSize: 13,
       marginTop: 16,
       marginBottom: 6,
+    },
+    step: {
+      fontFamily: bodyFont,
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '700',
+      marginTop: 18,
+    },
+    hintTight: {
+      fontFamily: bodyFont,
+      color: colors.muted,
+      fontSize: 14,
+      lineHeight: 20,
+      marginTop: 4,
+      marginBottom: 10,
     },
     command: {
       fontFamily: PlatformMono,

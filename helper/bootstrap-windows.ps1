@@ -43,5 +43,5 @@ $cli = Join-Path $src "helper\cli.js"
 node $cli --init
 & (Join-Path $src "helper\install-windows.ps1")
 Write-Host ""
-Write-Host "Leave this PC awake. Cluse on the phone reads a new report about every 10 minutes."
+Write-Host "Done. Cluse works whenever this PC is awake: it checks about every 10 minutes and lets you know when your limits reset."
 Write-Host "Scan the pairing code in Cluse. A topic that starts with cu- still works."

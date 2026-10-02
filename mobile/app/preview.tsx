@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useLocalSearchParams } from 'expo-router';
+import { FeedbackButton } from '../src/feedback-button';
 import { HelpBody } from '../src/help-view';
 import { sampleSnapshot } from '../src/model';
 import { SetupFlow } from '../src/setup-view';
@@ -27,7 +28,6 @@ function PreviewBody({ screen, colors }: { screen: string; colors: Palette }) {
   const base = sampleSnapshot(now);
   const fresh = {
     ...base,
-    plan: 'Pro',
     fetchedAt: new Date(now - 4 * 60 * 1000).toISOString(),
     windows: base.windows.map((window) =>
       window.id === 'session' ? { ...window, usedPercent: 16 } : { ...window, usedPercent: 13 },
@@ -100,7 +100,7 @@ function PreviewBody({ screen, colors }: { screen: string; colors: Palette }) {
       />
     );
   }
-  return (
+  const home = (
     <UsageHome
       colors={colors}
       snapshot={fresh}
@@ -115,6 +115,16 @@ function PreviewBody({ screen, colors }: { screen: string; colors: Palette }) {
       onForget={() => undefined}
     />
   );
+  if (screen === 'bottom') {
+    return (
+      <View>
+        {home}
+        <FeedbackButton colors={colors} />
+        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 18 }}>Cluse is not affiliated with Anthropic.</Text>
+      </View>
+    );
+  }
+  return home;
 }
 
 function WidgetCard({ scheme }: { scheme: WidgetScheme }) {
@@ -135,7 +145,6 @@ function WidgetCard({ scheme }: { scheme: WidgetScheme }) {
     >
       <View style={widget.row}>
         <Text style={{ color: colors.muted, fontSize: metrics.title }}>Cluse</Text>
-        <Text style={{ color: colors.accent, fontSize: metrics.title }}>Pro</Text>
       </View>
       <PreviewMeter label="5-hour" percent={16} when="resets in 3h 12m" inner={inner} scheme={scheme} />
       <PreviewMeter label="Weekly" percent={13} when="resets in 4d 2h" inner={inner} scheme={scheme} />

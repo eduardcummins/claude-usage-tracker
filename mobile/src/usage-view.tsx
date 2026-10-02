@@ -61,7 +61,6 @@ export function UsageHome({
           <Text style={styles.headerLink}>Help</Text>
         </Pressable>
       </View>
-      {snapshot?.plan ? <Text style={styles.plan}>{snapshot.plan}</Text> : null}
       {snapshot && snapshot.windows.length > 0 ? (
         <Text style={styles.quiet}>
           Updated {formatAge(snapshot.fetchedAt, now)} · {formatWhen(snapshot.fetchedAt, zone)}
@@ -77,7 +76,7 @@ export function UsageHome({
           <UsageRing percent={null} size={120} color={colors.accent} track={colors.track} />
           <Text style={styles.emptyTitle}>No report yet</Text>
           <Text style={styles.quietCenter}>
-            The computer sends one about every 10 minutes. Leave it awake, with Claude Code signed in.
+            The computer sends one about every 10 minutes whenever it is awake and Claude Code is signed in.
           </Text>
         </View>
       ) : null}
@@ -217,13 +216,6 @@ function makeStyles(colors: Palette) {
     },
     headerLink: {
       fontFamily: bodyFont,
-      color: colors.accent,
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    plan: {
-      fontFamily: bodyFont,
-      marginTop: 6,
       color: colors.accent,
       fontSize: 16,
       fontWeight: '600',
