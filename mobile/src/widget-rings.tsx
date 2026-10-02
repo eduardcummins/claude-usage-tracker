@@ -111,7 +111,7 @@ export function CompactWidget({
     >
       <FlexWidget style={{ flexDirection: 'row', width: 'match_parent', alignItems: 'center', justifyContent: 'space-between' }}>
         <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <SvgWidget svg={markSvg(colors.accent)} style={{ width: 22, height: 22 }} />
+          <SvgWidget svg={markSvg(colors.accent)} style={{ width: 26, height: 26 }} />
           <TextWidget text="Cluse" style={{ fontSize: 14, color: colors.ink, marginLeft: 6 }} />
         </FlexWidget>
         {plan ? (
@@ -208,16 +208,32 @@ export function ringSvg(percent: number | null, color: string, track: string): s
 }
 
 export function markSvg(color: string): string {
-  const beads = [];
-  const count = 11;
-  const start = (40 * Math.PI) / 180;
-  const sweep = (280 * Math.PI) / 180;
-  for (let i = 0; i < count; i += 1) {
-    const angle = start + (sweep * i) / (count - 1);
-    const x = 50 + 32 * Math.cos(angle);
-    const y = 50 - 32 * Math.sin(angle);
-    const radius = i === count - 1 ? 7 : 4.2;
-    beads.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius}" fill="${color}"/>`);
+  const cx = 50;
+  const cy = 50;
+  const radius = 32;
+  const stroke = 11;
+  const segments = 5;
+  const start = 48;
+  const gap = 26;
+  const piece = (318 - start - (segments - 1) * gap) / segments;
+  const arcs = [];
+  let last = start;
+  for (let i = 0; i < segments; i += 1) {
+    const a0 = start + i * (piece + gap);
+    const a1 = a0 + piece;
+    last = a1;
+    const p0 = polar(cx, cy, radius, a0);
+    const p1 = polar(cx, cy, radius, a1);
+    arcs.push(
+      `<path d="M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A ${radius} ${radius} 0 0 1 ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round"/>`,
+    );
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${beads.join('')}</svg>`;
+  const dot = polar(cx, cy, radius, last + 22);
+  const dotRadius = stroke * 0.34;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${arcs.join('')}<circle cx="${dot.x.toFixed(2)}" cy="${dot.y.toFixed(2)}" r="${dotRadius.toFixed(2)}" fill="${color}"/></svg>`;
+}
+
+function polar(cx: number, cy: number, radius: number, degrees: number): { x: number; y: number } {
+  const rad = (degrees * Math.PI) / 180;
+  return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) };
 }

@@ -59,8 +59,9 @@ test('the helper publishes to the local relay and the phone decrypts it', async 
 
     const raw = await mf.dispatchFetch(`${origin}/v1/devices/${config.relay.deviceId}`);
     const stored = await raw.json();
+    assert.equal(stored.plan, undefined);
+    assert.equal(stored.windows, undefined);
     assert.equal(JSON.stringify(stored).includes('Sample'), false);
-    assert.equal(JSON.stringify(stored).includes('86'), false);
   } finally {
     await mf.dispose();
   }

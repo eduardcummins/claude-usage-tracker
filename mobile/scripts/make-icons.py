@@ -87,15 +87,42 @@ def round_rect(buf, w, h, radius, color):
                 put(buf, w, h, x, y, color)
 
 
-def mark(buf, w, h, cx, cy, radius, bead, color, count=14):
-    start = math.radians(40)
-    sweep = math.radians(280)
-    for i in range(count):
-        angle = start + sweep * i / (count - 1)
-        x = cx + radius * math.cos(angle)
-        y = cy - radius * math.sin(angle)
-        size = bead * 1.7 if i == count - 1 else bead
-        disc(buf, w, h, x, y, size, color)
+def mark_geometry(segments=5):
+    """Pillow angles: 0 is east, clockwise. The C opens on the right and ends upper-right."""
+    start = 48
+    end = 318
+    gap = 26
+    piece = (end - start - (segments - 1) * gap) / segments
+    return start, end, gap, piece
+
+
+def draw_mark(draw, cx, cy, radius, thickness, color, segments=5):
+    start, _end, gap, piece = mark_geometry(segments)
+    box = [cx - radius, cy - radius, cx + radius, cy + radius]
+    cap = thickness / 2
+    last = start
+    for i in range(segments):
+        a0 = start + i * (piece + gap)
+        a1 = a0 + piece
+        last = a1
+        draw.arc(box, a0, a1, fill=color, width=int(round(thickness)))
+        for angle in (a0, a1):
+            point = _polar(cx, cy, radius, angle)
+            draw.ellipse(_circle(point, cap), fill=color)
+    # A gap past the upper-right cap, then one solid dot.
+    dot_angle = last + 22
+    dot = _polar(cx, cy, radius, dot_angle)
+    draw.ellipse(_circle(dot, thickness * 0.34), fill=color)
+
+
+def _polar(cx, cy, radius, degrees):
+    rad = math.radians(degrees)
+    return cx + radius * math.cos(rad), cy + radius * math.sin(rad)
+
+
+def _circle(point, radius):
+    x, y = point
+    return [x - radius, y - radius, x + radius, y + radius]
 
 
 def text(buf, w, h, x, y, message, color, scale=4):
@@ -131,27 +158,34 @@ def write_png(path, w, h, buf):
 
 
 def main():
+    from PIL import Image, ImageDraw
+
     ROOT.mkdir(parents=True, exist_ok=True)
-    icon = blank(1024, 1024, CLEAR)
-    round_rect(icon, 1024, 1024, 220, CREAM)
-    mark(icon, 1024, 1024, 512, 512, 250, 34, TERRACOTTA)
-    write_png(ROOT / "icon.png", 1024, 1024, icon)
+    cream = (250, 249, 245, 255)
+    warm = (214, 196, 180, 255)
+    terracotta = (201, 100, 66, 255)
 
-    foreground = blank(1024, 1024, CLEAR)
-    mark(foreground, 1024, 1024, 512, 512, 230, 32, TERRACOTTA)
-    write_png(ROOT / "android-icon-foreground.png", 1024, 1024, foreground)
-    write_png(ROOT / "splash-icon.png", 1024, 1024, foreground)
+    icon = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(icon)
+    draw.rounded_rectangle([0, 0, 1023, 1023], radius=228, fill=cream)
+    draw.rounded_rectangle([28, 28, 995, 995], radius=206, outline=warm, width=14)
+    draw_mark(draw, 512, 512, 300, 74, terracotta)
+    icon.save(ROOT / "icon.png")
 
-    background = blank(1024, 1024, CREAM)
-    write_png(ROOT / "android-icon-background.png", 1024, 1024, background)
+    foreground = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    draw_mark(ImageDraw.Draw(foreground), 512, 512, 268, 66, terracotta)
+    foreground.save(ROOT / "android-icon-foreground.png")
+    foreground.save(ROOT / "splash-icon.png")
 
-    mono = blank(1024, 1024, CLEAR)
-    mark(mono, 1024, 1024, 512, 512, 230, 32, WHITE)
-    write_png(ROOT / "android-icon-monochrome.png", 1024, 1024, mono)
+    Image.new("RGBA", (1024, 1024), cream).save(ROOT / "android-icon-background.png")
 
-    favicon = blank(48, 48, CREAM)
-    mark(favicon, 48, 48, 24, 24, 12, 1.8, TERRACOTTA, 10)
-    write_png(ROOT / "favicon.png", 48, 48, favicon)
+    mono = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    draw_mark(ImageDraw.Draw(mono), 512, 512, 268, 66, (255, 255, 255, 255))
+    mono.save(ROOT / "android-icon-monochrome.png")
+
+    favicon = Image.new("RGBA", (192, 192), cream)
+    draw_mark(ImageDraw.Draw(favicon), 96, 96, 62, 18, terracotta)
+    favicon.resize((48, 48), Image.Resampling.LANCZOS).save(ROOT / "favicon.png")
     feature_graphic()
 
 
