@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const TOPIC = 'claude-usage-topic';
 const SERVER = 'claude-usage-server';
 const KEY = 'claude-usage-key';
-const RELAY = 'claude-usage-relay';
+const RELAY = 'claude-usage-relay'; // removed so an older saved blob is not reused
 const SEEN = 'claude-usage-seen';
 
 export type PhoneLink = { kind: 'ntfy'; topic: string; server: string; key: string };
