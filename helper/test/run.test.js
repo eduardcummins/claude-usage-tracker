@@ -29,6 +29,7 @@ test('two mock scenarios publish a snapshot and then one reset alert', async () 
   await main(['--mock', '--scenario', 'before'], deps(home, published, logs));
   assert.equal(published.length, 1);
   assert.equal(published[0].priority, 1);
+  assert.equal(published[0].cache, 'yes');
   assert.equal(published[0].tags[0], 'snapshot');
   assert.match(published[0].topic, /-data$/);
   const snapshot = JSON.parse(published[0].message);

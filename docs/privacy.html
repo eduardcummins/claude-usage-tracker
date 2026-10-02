@@ -15,38 +15,34 @@
 <body>
   <main>
     <h1>Plan Pace privacy policy</h1>
-    <p>Last updated: 1 October 2026.</p>
+    <p>Last updated: 2 October 2026.</p>
     <p>
       Plan Pace is an independent app. It is not made by Anthropic and it is not affiliated with Anthropic.
       This policy describes what the app does with information on your phone.
     </p>
 
     <h2>What stays on your phone</h2>
-    <p>After you sign in, the app stores:</p>
+    <p>After you save a topic, the app stores:</p>
     <ul>
-      <li>The login tokens that let the app read plan usage. These are kept in the phone’s secure storage (Android Keystore or iOS Keychain).</li>
+      <li>The ntfy topic you pasted, and the server address (normally ntfy.sh). The topic is the key that lets this phone read the usage report.</li>
       <li>Usage percentages, reset times, and a short list of recent checks, so the screen and the Android home screen widget can show them.</li>
       <li>The times of reset notifications the app has scheduled.</li>
     </ul>
     <p>
       The app does not read your chats, files, contacts, photos, or location. It does not include advertising or analytics.
-      The person who published the app does not receive your login or your usage numbers.
+      The person who published the app does not receive your topic or your usage numbers.
     </p>
 
     <h2>What is sent off the phone</h2>
     <p>
-      To sign in and to refresh the login, the app contacts Claude’s login service
-      (<a href="https://platform.claude.com">platform.claude.com</a> and, if needed,
-      <a href="https://console.anthropic.com">console.anthropic.com</a>).
-      The sign-in page itself opens on <a href="https://claude.com">claude.com</a>.
+      The phone does not sign in to Claude. A helper on your computer reads the plan with the Claude Code login already on that computer, and publishes a usage report to your ntfy topic.
     </p>
     <p>
-      To read usage, the app sends the login token to
-      <a href="https://api.anthropic.com/api/oauth/usage">https://api.anthropic.com/api/oauth/usage</a>.
-      Anthropic returns the usage percentages and reset times. That is the same kind of request Claude’s own tools make.
-      It is not a documented public API, and Anthropic can change or block it.
+      To show the meters, the app requests the latest cached report from your topic on
+      <a href="https://ntfy.sh">ntfy.sh</a> (or another ntfy server, if you pasted a URL for one).
+      That request uses HTTPS. Anyone who knows the topic can read the same percentages.
+      The app does not send the usage numbers to the person who published Plan Pace.
     </p>
-    <p>Those requests use HTTPS. The app does not send the usage numbers to anyone else.</p>
 
     <h2>Notifications</h2>
     <p>
@@ -56,13 +52,13 @@
 
     <h2>Deleting your information</h2>
     <p>
-      Sign out inside Plan Pace deletes the login tokens and the saved usage from this phone.
+      Remove topic inside Plan Pace deletes the saved topic and the saved usage from this phone.
       Uninstalling the app deletes what remains on the device.
       Plan Pace does not have its own account.
     </p>
     <p>
       Your Claude account belongs to Anthropic. To delete that account, use the account settings on
-      <a href="https://claude.ai">claude.ai</a>. Signing out of Plan Pace does not delete the Claude account.
+      <a href="https://claude.ai">claude.ai</a>. Removing the topic from Plan Pace does not delete the Claude account.
     </p>
 
     <h2>Children</h2>

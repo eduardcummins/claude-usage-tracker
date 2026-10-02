@@ -1,29 +1,25 @@
 # Plan Pace
 
-Plan Pace is a phone app that shows how much of your Claude plan is used, and when it resets. The phone signs in itself. It does not need a computer running in the background, and it does not need the ntfy app.
+Plan Pace is a phone app that shows how much of your Claude plan is used, and when it resets. The Mac helper reads the plan on the computer (the same login Claude Code already has) and publishes a usage report about every 10 minutes. The phone reads that report over HTTPS. It does not sign in to Claude, and it does not need the ntfy app.
 
 The numbers are the plan’s own figures: the 5-hour session and the weekly limit. When the account also returns a model-specific weekly limit, that is shown too. The app does not read chats or files.
 
-A computer helper is still in this repo. It is optional. Use it only if you want the computer to publish the same numbers to ntfy. The phone does not need that.
-
 ## Connect the phone
 
-You need the installed app (the steps are under [Build and install](#build-and-install)), or Expo Go while `npx expo start` is running on a computer. The home screen widget exists only in the installed Android app.
+You need the helper running on the Mac first (see [Mac helper](#mac-helper)), and the installed app (the steps are under [Build and install](#build-and-install)). Expo Go works for the screen while `npx expo start` is running. The home screen widget exists only in the installed Android app.
 
-The sign-in page cannot jump straight back into this app. Claude only allows its own app to receive that redirect. Plan Pace uses the same manual step as Claude Code’s own command-line login: the website shows a code, and you paste it.
+1. On the Mac, run `node helper/cli.js --init` if you have not already. The log prints `Phone topic:` followed by a short code.
+2. Open Plan Pace.
+3. Paste that topic into the box and tap **Save**.
+4. Allow notifications when the phone asks.
 
-1. Open Plan Pace.
-2. Tap **Open sign-in page**.
-3. Sign in on that page with the Claude account whose plan you want to see.
-4. The page shows a code. Copy the whole code. If it has a `#` in it, copy that part as well.
-5. Return to Plan Pace, paste the code into the box, and tap **Connect**.
-6. Allow notifications when the phone asks.
+The topic is a password for the usage percentages. Anyone who knows it can read them. It is stored on the phone and on the Mac. It is not written into this project.
 
-The code works once. It expires after about 10 minutes. If Connect fails, tap **Open sign-in page** again and paste the new code. Do not reuse an old one.
+The phone reads `https://ntfy.sh/<topic>-data/json?poll=1&since=12h`. The helper publishes the snapshot to that `-data` topic. Polling the topic without `-data` only shows reset alerts, so it looks empty when no limit has reset.
 
-The login is stored in the phone’s secure storage. It is not written into this project, and it is not sent to the person who published the app. Sign out deletes it from the phone.
+After a report arrives, the screen shows the percents, the reset times, and when the report was last updated. Pull down, or tap **Check now**, to read again. If the newest report is more than about 30 minutes old, the screen says the Mac may be asleep. The last numbers stay on screen.
 
-After that, the screen shows the percents and the reset times in your phone’s time zone. Pull down, or tap **Check now**, to refresh.
+A helper that is already installed does not need to be reinstalled for the phone to see these reports. It already publishes them to the `-data` topic, and ntfy.sh caches each one for about 12 hours. This copy of the helper also sends `Cache: yes`. Reinstall only if you want that explicit header.
 
 ### Reset notifications
 
@@ -35,7 +31,7 @@ On Android 12 and newer, exact alarms need a setting: **Settings → Apps → Pl
 
 ### Android home screen widget
 
-1. Connect the account and open the app once, so the numbers are saved.
+1. Save the topic and open the app once, so the numbers are saved.
 2. Long-press the home screen.
 3. Tap **Widgets**.
 4. Add **Plan Pace**.
@@ -52,7 +48,7 @@ These commands run on a computer, in this project folder. They upload the projec
 
 ### An APK you install yourself
 
-This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `3`.
+This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `4`.
 
 ```bash
 cd mobile
@@ -130,45 +126,39 @@ Scan the QR code with the iPhone camera or with Expo Go on Android. The phone an
 
 ## What can go wrong
 
-**Connect says the sign-in expired, or the code was rejected.**  
-Tap **Open sign-in page** again. Paste the new code straight away. An old code cannot be used twice.
+**Save says the topic is not valid.**  
+Paste the phone topic only, or the full `https://ntfy.sh/<topic>` URL. A topic ending in `-data` is accepted; the app strips that suffix and reads the data topic itself.
 
-**The page shows a code with a # in the middle.**  
-Paste all of it. The part after `#` is checked so a code from a different sign-in attempt is refused.
+**The screen says there is no report yet.**  
+The Mac sends one about every 10 minutes, and only while it is awake. Run `node helper/cli.js` once on the Mac and tap **Check now**.
 
-**The phone says it could not reach Claude.**  
-Check the phone’s internet connection, then tap **Check now**.
+**Polling the topic in a browser returns nothing.**  
+Usage updates are on `<topic>-data`, not on the topic you pasted. The pasted topic is for reset alerts. The app adds `-data` itself. ntfy.sh keeps messages for about 12 hours, so the app asks for `since=12h` and uses the newest snapshot.
 
-**The app says Claude asked it to slow down.**  
-Wait, then tap **Check now**. The last numbers stay on screen.
-
-**The meters stay empty after Connect.**  
-The code may have been for a different sign-in attempt. Open the sign-in page from the app, not from an old browser tab, and paste that code.
+**The numbers say the Mac may be asleep.**  
+The last report is more than about 30 minutes old. Wake the Mac. The last percents stay on screen.
 
 **A reset time arrived and the phone stayed quiet.**  
 Allow notifications for Plan Pace. On Android 12 or newer, also allow Alarms & reminders. Then open the app once so it can set the alarms again.
 
-**The widget is blank or still says to sign in.**  
-Open Plan Pace, wait until the meters appear, then add the widget again if it was added before the first successful check.
-
-**The report on screen is marked old.**  
-A background check has not run. Open the app. Battery saver and force-stop both delay background checks.
+**The widget is blank or still asks for a topic.**  
+Open Plan Pace, wait until the meters appear, then add the widget again if it was added before the first report.
 
 **A new APK will not install over the old one.**  
-The package id must stay `com.eduardcummins.claudeusage`, and `android.versionCode` must be higher than the installed app. Do not delete the old app first if you want to keep the saved login.
+The package id must stay `com.eduardcummins.claudeusage`, and `android.versionCode` must be higher than the installed app. Do not delete the old app first if you want to keep the saved topic.
 
 ## Play Store
 
 The prepared answers are in [docs/play-console.md](docs/play-console.md). Two limits are worth knowing before you pay for a Play account:
 
-- The usage check is not a published public API. The app can break if Anthropic changes that endpoint. The listing should say so.
+- The helper’s usage check is not a published public API. The phone stops getting new numbers if Anthropic changes that endpoint. The listing should say so.
 - Do not use the Claude or Anthropic name, or the Claude asterisk, as the store name or the icon. The name to use is **Plan Pace**. The icon is an original gauge.
 
 Play Console costs 25 USD once. The signup page can show that fee in local currency.
 
-## Optional computer helper
+## Mac helper
 
-Skip this section if the phone is signed in. The helper is a separate way to read usage on a computer that already has Claude Code installed, and to post it to an ntfy topic.
+The helper reads usage on a computer that already has Claude Code installed, and publishes it for the phone.
 
 You need Node.js 20 or newer (`node -v`). On a Mac the helper reads the Claude Code login from the macOS Keychain. On Windows the file is `%USERPROFILE%\.claude\.credentials.json`. On Linux it is `~/.claude/.credentials.json`.
 
@@ -179,7 +169,7 @@ node helper/cli.js --init
 
 `--doctor` prints the plan usage and does not contact the phone. `--init` creates a private ntfy topic. That topic is a password for the usage percentages. It is stored on the computer, not in this repo. Do not commit it.
 
-Install ntfy on the phone and subscribe to that topic if you want those alerts. Then:
+The phone does not need the ntfy app. Paste the phone topic into Plan Pace. A test alert goes to the topic itself; the usage numbers go to the same topic with `-data` on the end:
 
 ```bash
 node helper/cli.js --test-alert
@@ -224,7 +214,7 @@ npm test --prefix helper
 npm test --prefix mobile
 ```
 
-The tests do not contact Anthropic or ntfy, and they do not need a login.
+`npm test --prefix mobile` includes one check that publishes a sample report to a throwaway ntfy.sh topic and reads it back with the app’s poll code. The other tests do not contact Anthropic or ntfy, and they do not need a login.
 
 ## Accounts and money
 
@@ -238,3 +228,5 @@ The tests do not contact Anthropic or ntfy, and they do not need a login.
 An Expo Starter plan is 19 USD per month. Get it only if that month’s 15 Android builds are already used.
 
 The EAS project is already linked in `mobile/app.json` (`owner` `edcrypto`, project `claude-usage`). That project id is not a password. Do not put a Claude token, an ntfy topic, or a keystore password in the repo.
+
+The Android build command is `npm run build:android` in `mobile/`. `android.versionCode` is `4`.

@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.eduardcummins.claudeusage",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#faf9f5",
         "foregroundImage": "./assets/android-icon-foreground.png",

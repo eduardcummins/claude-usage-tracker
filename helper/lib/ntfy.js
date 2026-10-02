@@ -18,6 +18,9 @@ export async function publishNtfy({ server, topic, title, message, priority, tag
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      // ntfy.sh keeps a cached message for about 12 hours when this is set.
+      // Priority 1 already defaults to cached; the header makes that explicit.
+      Cache: 'yes',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({
@@ -26,6 +29,7 @@ export async function publishNtfy({ server, topic, title, message, priority, tag
       message,
       priority,
       tags,
+      cache: 'yes',
     }),
     signal: AbortSignal.timeout(20000),
   });
