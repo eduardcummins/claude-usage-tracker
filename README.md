@@ -213,7 +213,15 @@ Windows, in PowerShell:
 powershell -ExecutionPolicy Bypass -File helper\install-windows.ps1
 ```
 
-Remove it with `Unregister-ScheduledTask -TaskName ClaudeUsageAlert -Confirm:$false`.
+The scheduled task `ClaudeUsageAlert` runs through a small launcher, `%USERPROFILE%\.plan-pace\run-hidden.vbs`, so no window appears. Running the install or bootstrap command again replaces the task.
+
+To remove everything (the task, `%USERPROFILE%\.plan-pace` and `%USERPROFILE%\.claude-usage-alert`), run this in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/eduardcummins/claude-usage-tracker/main/helper/uninstall-windows.ps1 | iex
+```
+
+From a copy of this repo, `powershell -ExecutionPolicy Bypass -File helper\uninstall-windows.ps1` does the same. Node.js and Claude Code are not touched.
 
 Linux:
 

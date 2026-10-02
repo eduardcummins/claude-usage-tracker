@@ -33,6 +33,8 @@ if (Test-Path $unpack) { Remove-Item $unpack -Recurse -Force }
 Expand-Archive -Path $zip -DestinationPath $unpack -Force
 $extracted = Get-ChildItem $unpack -Directory | Select-Object -First 1
 if (-not $extracted) { throw "The download did not contain the helper." }
+# Pause an existing background check so its files can be replaced.
+Stop-ScheduledTask -TaskName "ClaudeUsageAlert" -ErrorAction SilentlyContinue
 if (Test-Path $src) { Remove-Item $src -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 Move-Item $extracted.FullName $src
@@ -45,3 +47,5 @@ node $cli --init
 Write-Host ""
 Write-Host "Done. Cluse works whenever this PC is awake: it checks about every 10 minutes and lets you know when your limits reset."
 Write-Host "Scan the pairing code in Cluse. A topic that starts with cu- still works."
+Write-Host "To remove Cluse from this PC later, run this in PowerShell:"
+Write-Host "  irm https://raw.githubusercontent.com/eduardcummins/claude-usage-tracker/main/helper/uninstall-windows.ps1 | iex"
