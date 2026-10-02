@@ -7,6 +7,7 @@ import { ensureFreshCredentials, loadCredentials } from './credentials.js';
 import { UserError } from './errors.js';
 import { installMac, uninstallMac } from './install.js';
 import { dataTopic, publishNtfy } from './ntfy.js';
+import { writeTopicPage } from './qr.js';
 import { fetchUsageResponse } from './oauth.js';
 import { formatPlan, parseUsageResponse } from './parse-usage.js';
 import { appPaths } from './paths.js';
@@ -126,16 +127,21 @@ async function initConfig(deps, args) {
   };
   const file = await writeConfig(deps.homeDir, config);
   deps.log(`Saved ${file}`);
-  printTopic(deps, config);
+  await printTopic(deps, config);
   return 0;
 }
 
-function printTopic(deps, config) {
+async function printTopic(deps, config) {
+  const page = await writeTopicPage(deps.homeDir, config.ntfyTopic);
   deps.log('');
   deps.log(`Phone topic: ${config.ntfyTopic}`);
   deps.log(`Usage updates are published to ${config.ntfyServer}/${dataTopic(config.ntfyTopic)}`);
   deps.log('');
-  deps.log('On the phone, open Plan Pace and paste the phone topic. The ntfy app is not required.');
+  deps.log(page.terminal);
+  deps.log('');
+  deps.log('On the phone, open Plan Pace, paste the phone topic, or scan the code above.');
+  deps.log(`A larger code is saved at ${page.file}`);
+  deps.log('The ntfy app is not required.');
   deps.log('Treat the topic like a password. Anyone who knows it can see usage percentages.');
 }
 

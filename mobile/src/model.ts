@@ -153,6 +153,14 @@ export function formatDuration(ms: number): string {
   return `${minutes}m`;
 }
 
+export function deviceTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
 export function zoneLabel(timeZone?: string | null): string {
   return !timeZone || safeZone(timeZone) === 'Europe/London' ? 'UK time' : safeZone(timeZone);
 }
