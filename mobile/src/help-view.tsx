@@ -45,7 +45,7 @@ export function HelpBody({ colors, onBack }: { colors: Palette; onBack: () => vo
       </Pressable>
       <Text style={styles.title}>Help</Text>
       <Text style={styles.lede}>
-        Cluse reads a usage report from your own computer. A pairing code keeps that report encrypted. A topic that starts with cu- still works. The phone does not sign in to Claude.
+        Cluse reads a usage report from your own computer. With a pairing code, ntfy only stores the encrypted report. A plain cu- topic still works. The phone does not sign in to Claude. Reset alerts are created on this phone.
       </Text>
       {ITEMS.map((item) => (
         <View key={item.title} style={styles.card}>

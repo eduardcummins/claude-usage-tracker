@@ -2,29 +2,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOPIC = 'claude-usage-topic';
 const SERVER = 'claude-usage-server';
+const KEY = 'claude-usage-key';
 const RELAY = 'claude-usage-relay';
 const SEEN = 'claude-usage-seen';
 
-export type PhoneLink =
-  | { kind: 'ntfy'; topic: string; server: string }
-  | { kind: 'relay'; url: string; deviceId: string; key: string };
+export type PhoneLink = { kind: 'ntfy'; topic: string; server: string; key: string };
 
 export async function loadLink(): Promise<PhoneLink | null> {
-  const relay = await readJson<PhoneLink>(RELAY);
-  if (relay?.kind === 'relay' && relay.url && relay.deviceId && relay.key) return relay;
   const settings = await loadSettings();
   if (!settings.topic) return null;
-  return { kind: 'ntfy', topic: settings.topic, server: settings.server };
+  const key = (await AsyncStorage.getItem(KEY)) || '';
+  return { kind: 'ntfy', topic: settings.topic, server: settings.server, key };
 }
 
 export async function saveLink(link: PhoneLink): Promise<void> {
-  if (link.kind === 'ntfy') {
-    await AsyncStorage.removeItem(RELAY);
-    await saveSettings(link.topic, link.server);
-    return;
-  }
-  await AsyncStorage.setItem(RELAY, JSON.stringify(link));
-  await saveSettings('', 'https://ntfy.sh');
+  await saveSettings(link.topic, link.server);
+  if (link.key) await AsyncStorage.setItem(KEY, link.key);
+  else await AsyncStorage.removeItem(KEY);
+  await AsyncStorage.removeItem(RELAY);
 }
 
 export async function loadSettings(): Promise<{ topic: string; server: string }> {
@@ -134,7 +129,7 @@ export async function saveSnapshot(snapshot: import('./model.ts').Snapshot): Pro
 }
 
 export async function clearPlanData(): Promise<void> {
-  await AsyncStorage.multiRemove([WIDGET, HISTORY, WINDOWS, SCHEDULED, SNAPSHOT, RELAY, TOPIC, SERVER]);
+  await AsyncStorage.multiRemove([WIDGET, HISTORY, WINDOWS, SCHEDULED, SNAPSHOT, RELAY, KEY, TOPIC, SERVER]);
 }
 
 async function readJson<T>(key: string): Promise<T | null> {

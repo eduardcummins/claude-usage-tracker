@@ -1,19 +1,18 @@
-export type RelayLink = {
-  kind: 'relay';
+export type Pairing = {
   url: string;
-  deviceId: string;
+  topic: string;
   key: string;
 };
 
-export function decodePairing(value: string): RelayLink | null {
+export function decodePairing(value: string): Pairing | null {
   const text = value.trim();
   if (!text.startsWith('cluse1.')) return null;
-  let parsed: { v?: number; url?: string; id?: string; key?: string };
+  let parsed: { v?: number; url?: string; topic?: string; key?: string };
   try {
     parsed = JSON.parse(bytesToString(b64urlToBytes(text.slice('cluse1.'.length)))) as {
       v?: number;
       url?: string;
-      id?: string;
+      topic?: string;
       key?: string;
     };
   } catch {
@@ -21,12 +20,12 @@ export function decodePairing(value: string): RelayLink | null {
   }
   if (!parsed || parsed.v !== 1) return null;
   const url = String(parsed.url || '').replace(/\/$/, '');
-  const deviceId = String(parsed.id || '');
+  const topic = String(parsed.topic || '');
   const key = String(parsed.key || '');
   if (!allowedUrl(url)) return null;
-  if (!/^[A-Za-z0-9_-]{16,64}$/.test(deviceId)) return null;
+  if (!/^[-_A-Za-z0-9]{1,59}$/.test(topic)) return null;
   if (b64urlToBytes(key).length !== 32) return null;
-  return { kind: 'relay', url, deviceId, key };
+  return { url, topic, key };
 }
 
 function allowedUrl(url: string): boolean {

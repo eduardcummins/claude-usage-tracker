@@ -38,15 +38,14 @@
       The phone does not sign in to Claude. A helper on your computer reads the plan with the Claude Code login already on that computer.
     </p>
     <p>
-      If you scan or paste a pairing code, the computer encrypts the usage report before sending it.
-      The encryption key is in that code. It is not sent to the relay.
-      The relay stores only the encrypted report, keeps the latest one for about 12 hours, and then deletes it.
-      The person who runs the relay cannot read the percentages.
+      If you scan or paste a pairing code, the computer encrypts the usage report before publishing it to
+      <a href="https://ntfy.sh">ntfy.sh</a> (or another ntfy server named in that code).
+      The encryption key is in the pairing code. It is not sent to ntfy.
+      ntfy stores only the encrypted report for about 12 hours and then deletes it. ntfy cannot read the percentages.
     </p>
     <p>
-      A topic that starts with cu- still works. For that older path, the app requests the latest cached report from
-      <a href="https://ntfy.sh">ntfy.sh</a> (or another ntfy server, if you pasted a URL for one).
-      That request uses HTTPS. Anyone who knows the topic can read the same percentages.
+      A plain topic that starts with cu- and has no key still works. For that older path, the report is readable by anyone who knows the topic.
+      The phone reads it from the same ntfy server over HTTPS.
       The app does not send the usage numbers to the person who published Cluse.
     </p>
     <p>

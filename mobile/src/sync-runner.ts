@@ -3,7 +3,6 @@ import { isValidTopic } from './model';
 import type { Snapshot } from './model';
 import { fetchLatestSnapshot, settingsFromInput } from './ntfy';
 import { decodePairing } from './pairing';
-import { fetchRelaySnapshot } from './relay';
 import { stopBackground } from './register-background';
 import {
   WidgetCache,
@@ -45,20 +44,20 @@ export function runSync(updateWidget = true): Promise<SyncOutcome> {
 export async function saveTopic(raw: string): Promise<void> {
   const pairing = decodePairing(raw);
   if (pairing) {
-    await saveLink(pairing);
+    await saveLink({ kind: 'ntfy', topic: pairing.topic, server: pairing.url, key: pairing.key });
     return;
   }
   const settings = settingsFromInput(raw);
   if (!isValidTopic(settings.topic)) {
     throw new Error('Paste the pairing code, or a topic that uses letters, numbers, hyphens, or underscores.');
   }
-  await saveLink({ kind: 'ntfy', topic: settings.topic, server: settings.server });
+  await saveLink({ kind: 'ntfy', topic: settings.topic, server: settings.server, key: '' });
 }
 
 export async function forgetTopic(): Promise<void> {
   await stopBackground();
   await cancelResetAlarms();
-  await saveLink({ kind: 'ntfy', topic: '', server: 'https://ntfy.sh' });
+  await saveLink({ kind: 'ntfy', topic: '', server: 'https://ntfy.sh', key: '' });
   await clearPlanData();
   await saveWidgetCache(emptyWidget);
   await pushWidget(emptyWidget);
@@ -77,10 +76,7 @@ async function runSyncOnce(updateWidget: boolean): Promise<SyncOutcome> {
   let snapshot = saved;
   let error: string | null = null;
   try {
-    const latest =
-      link.kind === 'relay'
-        ? await fetchRelaySnapshot(fetch, link)
-        : await fetchLatestSnapshot(fetch, link.server, link.topic);
+    const latest = await fetchLatestSnapshot(fetch, link.server, link.topic, link.key);
     if (latest) {
       snapshot = latest;
       const alarms = planAlarms({

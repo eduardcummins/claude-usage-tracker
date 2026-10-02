@@ -128,7 +128,7 @@ export function SetupFlow({
             <Text style={styles.secondaryLabel}>Scan QR code</Text>
           </Pressable>
           <Text style={styles.note}>
-            A pairing code is the encryption key. It stays on this phone. An older cu- topic is a password for the percentages.
+            A pairing code is the encryption key. ntfy only sees the encrypted report. A plain cu- topic is still a password for the percentages.
           </Text>
         </View>
       ) : null}

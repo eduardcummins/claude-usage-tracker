@@ -1,7 +1,8 @@
-export function encodePairing({ url, deviceId, key }) {
-  const payload = Buffer.from(JSON.stringify({ v: 1, url: url.replace(/\/$/, ''), id: deviceId, key }), 'utf8').toString(
-    'base64url',
-  );
+export function encodePairing({ url, topic, key }) {
+  const payload = Buffer.from(
+    JSON.stringify({ v: 1, url: url.replace(/\/$/, ''), topic, key }),
+    'utf8',
+  ).toString('base64url');
   return `cluse1.${payload}`;
 }
 
@@ -16,12 +17,12 @@ export function decodePairing(value) {
   }
   if (!parsed || parsed.v !== 1) return null;
   const url = String(parsed.url || '').replace(/\/$/, '');
-  const deviceId = String(parsed.id || '');
+  const topic = String(parsed.topic || '');
   const key = String(parsed.key || '');
   if (!allowedUrl(url)) return null;
-  if (!/^[A-Za-z0-9_-]{16,64}$/.test(deviceId)) return null;
+  if (!/^[-_A-Za-z0-9]{1,59}$/.test(topic)) return null;
   if (Buffer.from(key, 'base64url').length !== 32) return null;
-  return { url, deviceId, key };
+  return { url, topic, key };
 }
 
 function allowedUrl(url) {

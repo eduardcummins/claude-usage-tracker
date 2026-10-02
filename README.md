@@ -163,9 +163,9 @@ Open Cluse, wait until the meters appear, then add the widget again if it was ad
 **A new APK will not install over the old one.**  
 The package id must stay `com.eduardcummins.claudeusage`, and `android.versionCode` must be higher than the installed app. Do not delete the old app first if you want to keep the saved topic.
 
-## Encrypted relay
+## Encrypted ntfy
 
-New installs can pair with an encrypted relay. The computer encrypts each snapshot. The relay stores only ciphertext for about 12 hours. The phone decrypts it with the pairing code from the QR. The older `cu-` topic is still published for this release, so a phone that has not re-paired keeps working. Deploy steps and the one Cloudflare API token are in [docs/relay.md](docs/relay.md).
+`--init` creates a topic and an AES-256-GCM key. The pairing QR carries both, plus the server URL. The default server is `helper/ntfy.json` (`https://ntfy.sh`). The computer encrypts each snapshot and publishes it to `<topic>-data`. ntfy stores ciphertext. The phone decrypts with the key from the code. Reset alerts are scheduled on the phone. A plain `cu-` topic with no key still publishes readable percentages, so an existing install keeps working until it is re-paired with `--init --rotate`.
 
 ## Play Store
 
@@ -189,7 +189,7 @@ node helper/cli.js --init
 
 `--doctor` prints the plan usage and does not contact the phone. `--init` creates a private ntfy topic. That topic is a password for the usage percentages. It is stored on the computer, not in this repo. Do not commit it.
 
-The phone does not need the ntfy app. Paste the phone topic into Cluse. A test alert goes to the topic itself; the usage numbers go to the same topic with `-data` on the end:
+The phone does not need the ntfy app. Scan the pairing code, or paste it. A plain cu- topic still works. Usage is published to the topic with `-data` on the end. Reset alerts stay on the phone:
 
 ```bash
 node helper/cli.js --test-alert

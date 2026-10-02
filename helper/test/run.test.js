@@ -4,8 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { writeConfig } from '../lib/config.js';
 import { appPaths } from '../lib/paths.js';
 import { main } from '../lib/main.js';
+import { openJson } from '../lib/seal.js';
 
 const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'fixtures');
 const NOW = Date.parse('2026-10-01T16:00:00.000Z');
@@ -21,34 +23,47 @@ test('mock dry-run prints sample usage and does not save or send', async () => {
   await assert.rejects(() => fs.stat(appPaths(home).state));
 });
 
-test('two mock scenarios publish a snapshot and then one reset alert', async () => {
+test('two mock scenarios publish an encrypted snapshot and no bare-topic alert', async () => {
   const home = await tempHome();
   const published = [];
   const logs = [];
   await main(['--init'], deps(home, published, logs));
+  const key = JSON.parse(await fs.readFile(appPaths(home).config, 'utf8')).ntfyKey;
   await main(['--mock', '--scenario', 'before'], deps(home, published, logs));
   assert.equal(published.length, 1);
   assert.equal(published[0].priority, 1);
   assert.equal(published[0].cache, 'yes');
   assert.equal(published[0].tags[0], 'snapshot');
+  assert.equal(published[0].title, 'Cluse');
   assert.match(published[0].topic, /-data$/);
-  const snapshot = JSON.parse(published[0].message);
+  assert.equal(published[0].message.includes('Sample'), false);
+  assert.equal(published[0].message.includes('usedPercent'), false);
+  const snapshot = openJson(key, JSON.parse(published[0].message));
   assert.equal(snapshot.windows[0].usedPercent, 86);
   assert.equal(snapshot.extraUsageLabel, 'Extra usage: $2.50 of $1000.00');
   assert.doesNotMatch(JSON.stringify(published), /sk-ant-/);
 
   published.length = 0;
   await main(['--mock', '--scenario', 'after'], deps(home, published, logs));
-  assert.equal(published.length, 2);
-  const alert = published.find((message) => message.tags.includes('reset'));
-  assert.equal(alert.priority, 5);
-  assert.match(alert.message, /23:00/);
-  assert.match(alert.message, /UK time/);
-  assert.doesNotMatch(alert.topic, /-data$/);
-
-  published.length = 0;
-  await main(['--mock', '--scenario', 'after'], deps(home, published, logs));
+  assert.equal(published.length, 1);
   assert.equal(published.filter((message) => message.tags.includes('reset')).length, 0);
+  assert.match(logs.join('\n'), /23:00/);
+});
+
+test('a topic with no key still publishes a readable snapshot', async () => {
+  const home = await tempHome();
+  const published = [];
+  await writeConfig(home, {
+    ntfyServer: 'https://ntfy.sh',
+    ntfyTopic: 'cu-legacytopic',
+    timeZone: 'Europe/London',
+  });
+  await main(['--mock', '--scenario', 'before'], deps(home, published, []));
+  assert.equal(published.length, 1);
+  assert.equal(published.filter((message) => message.tags.includes('reset')).length, 0);
+  const snapshot = JSON.parse(published[0].message);
+  assert.equal(snapshot.plan, 'Sample');
+  assert.equal(snapshot.windows[0].usedPercent, 86);
 });
 
 test('switching from sample data to a live check does not fire a false reset', async () => {
@@ -70,7 +85,8 @@ test('switching from sample data to a live check does not fire a false reset', a
     ],
   };
   await main([], liveDeps(home, published, later));
-  assert.equal(published.filter((message) => message.tags.includes('reset')).length, 1);
+  assert.equal(published.length, 1);
+  assert.equal(published.filter((message) => message.tags.includes('reset')).length, 0);
 });
 
 test('doctor reads a login file and does not contact ntfy', async () => {

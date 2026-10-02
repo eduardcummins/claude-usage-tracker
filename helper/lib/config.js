@@ -31,25 +31,17 @@ export function normalizeConfig(data) {
     ntfyTopic: topic,
     ntfyToken: data.ntfyToken ? String(data.ntfyToken) : '',
     timeZone: data.timeZone || data.timezone || 'Europe/London',
-    relay: normalizeRelay(data.relay),
+    ntfyKey: normalizeKey(data.ntfyKey),
   };
 }
 
-function normalizeRelay(relay) {
-  if (!relay) return null;
-  if (typeof relay !== 'object') throw new UserError('The relay pairing in the helper config is not valid.');
-  const url = String(relay.url || '').replace(/\/$/, '');
-  const localhost = /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(url);
-  if (!/^https:\/\//i.test(url) && !localhost) {
-    throw new UserError('The relay URL in the helper config must start with https://');
+function normalizeKey(value) {
+  const key = value ? String(value) : '';
+  if (!key) return '';
+  if (Buffer.from(key, 'base64url').length !== 32) {
+    throw new UserError('The encryption key in the helper config is not valid. Run --init --rotate to pair again.');
   }
-  const deviceId = String(relay.deviceId || '');
-  const writeSecret = String(relay.writeSecret || '');
-  const key = String(relay.key || '');
-  if (!deviceId || !writeSecret || !key) {
-    throw new UserError('The relay pairing in the helper config is incomplete. Run --init again.');
-  }
-  return { url, deviceId, writeSecret, key };
+  return key;
 }
 
 export async function writeConfig(homeDir, config) {

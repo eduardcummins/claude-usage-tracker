@@ -74,7 +74,7 @@ Answer from what the app actually does.
 
 | Question | Answer |
 | --- | --- |
-| Does the app collect or share any of the required user data types? | The phone stores the pairing code or older ntfy topic the user pastes, and the usage percentages it decrypts or reads. A pairing code sends the phone to the Cluse relay, which stores only ciphertext for about 12 hours. The relay operator cannot read the percentages. An older cu- topic is read from ntfy.sh (or the server in a pasted URL), where anyone with the topic can see the percentages. The developer does not receive a readable copy. The phone does not send a Claude login. The camera is optional and is used only to scan a QR code; images are not stored or uploaded. |
+| Does the app collect or share any of the required user data types? | The phone stores the pairing code or older ntfy topic the user pastes, and the usage percentages it decrypts or reads. With a pairing code, the computer publishes ciphertext to ntfy.sh (or the server in the code). ntfy stores that ciphertext for about 12 hours and cannot read the percentages. A plain cu- topic with no key is still readable by anyone who knows the topic. The developer does not receive a readable copy. The phone does not send a Claude login. The camera is optional and is used only to scan a QR code; images are not stored or uploaded. |
 | Is all of the data collected by your app encrypted in transit? | Yes. The requests use HTTPS. |
 | Do you provide a way for users to request that their data be deleted? | Yes. Remove topic in the app deletes the topic and the saved usage from the phone. Uninstalling deletes the rest. There is no Cluse account. The Claude account is deleted on claude.ai, which the privacy policy states. |
 | Location | No. |
@@ -82,9 +82,9 @@ Answer from what the app actually does.
 | Photos and videos | Not collected. Camera permission is optional, requested only when the user taps Scan QR code, and the frames are not saved. |
 | Financial info | No. |
 | Messages, photos, audio, files, contacts, calendar | No. |
-| App activity | Usage percentages and reset times are stored on the device and read from the user’s ntfy topic. They are not sent to the developer. |
+| App activity | Usage percentages and reset times are stored on the device. With a pairing code they are decrypted from ciphertext on the user’s ntfy topic. They are not sent to the developer. |
 | Device or other IDs | No. |
-| Data shared with third parties | With a pairing code, the phone requests an encrypted blob from the Cluse relay. The relay cannot read it. With an older cu- topic, the phone requests the cached usage message from the ntfy server the user chose (normally ntfy.sh). It is not sold and it is not used for advertising. |
+| Data shared with third parties | The phone requests the cached message from ntfy.sh, or from another ntfy server named in a pasted URL. With a pairing code that message is ciphertext and ntfy cannot read it. A plain cu- topic is readable by anyone who knows it. The data is not sold and it is not used for advertising. |
 
 If the form’s “account deletion” link is required, use the privacy policy URL. The policy explains removing the topic in the app and points Claude account deletion to claude.ai.
 
