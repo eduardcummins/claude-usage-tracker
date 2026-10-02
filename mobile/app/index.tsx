@@ -123,7 +123,7 @@ export default function HomeScreen() {
         />
         {Platform.OS === 'android' ? (
           <Text style={[styles.note, { color: colors.muted }]}>
-            Home screen widget: long-press the home screen, tap Widgets, and add Plan Pace.
+            Home screen widget: long-press the home screen, tap Widgets, and add Cluse.
           </Text>
         ) : null}
         <Text style={[styles.note, { color: colors.muted }]}>
@@ -131,7 +131,7 @@ export default function HomeScreen() {
           each reset time. Allow notifications
           {Platform.OS === 'android' ? ', and on Android 12 or newer allow Alarms & reminders' : ''}.
         </Text>
-        <Text style={[styles.footer, { color: colors.muted }]}>Plan Pace is not affiliated with Anthropic.</Text>
+        <Text style={[styles.footer, { color: colors.muted }]}>Cluse is not affiliated with Anthropic.</Text>
       </ScrollView>
     </SafeAreaView>
   );

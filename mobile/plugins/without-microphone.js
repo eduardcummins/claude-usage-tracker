@@ -3,7 +3,7 @@ const path = require('path');
 const { withFinalizedMod } = require('expo/config-plugins');
 
 /**
- * Plan Pace scans a QR code. It does not record audio.
+ * Cluse scans a QR code. It does not record audio.
  * expo-camera still writes a microphone usage string on iOS.
  */
 function withoutMicrophone(config) {

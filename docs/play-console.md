@@ -1,4 +1,4 @@
-# Google Play listing for Plan Pace
+# Google Play listing for Cluse
 
 Use this when filling in Play Console. The app id stays `com.eduardcummins.claudeusage` so an install can replace the APK already on the phone. The store name should not.
 
@@ -11,7 +11,7 @@ Use this when filling in Play Console. The app id stays `com.eduardcummins.claud
 
 ## Safe store name
 
-**Plan Pace**
+**Cluse**
 
 ## Short description
 
@@ -24,13 +24,13 @@ Session and weekly plan usage, and when each limit resets.
 ## Full description
 
 ```text
-Plan Pace shows two rings: the 5-hour session and the weekly limit. Each one shows the percent used, a countdown, and the reset time in your local time. You can get a notification when a limit resets. On Android, a home screen widget shows a horizontal bar for each, with a marker at the current percent and the reset countdown.
+Cluse shows two rings: the 5-hour session and the weekly limit. Each one shows the percent used, a countdown, and the reset time in your local time. You can get a notification when a limit resets. On Android, a home screen widget shows a horizontal bar for each, with a marker at the current percent and the reset countdown.
 
 The phone does not sign in. A small helper on your Mac or Windows computer reads the plan you already use there and publishes the percentages. The app’s first screen gives you one command to copy. It installs the helper and prints a topic. Paste that topic, or scan the QR code. The ntfy app is not required.
 
-Plan Pace does not read chats or files, and it does not send your usage to the person who published the app. The camera is used only if you choose to scan the QR code. The picture is not saved.
+Cluse does not read chats or files, and it does not send your usage to the person who published the app. The camera is used only if you choose to scan the QR code. The picture is not saved.
 
-Plan Pace is not affiliated with the company that provides the plan. The figures come from the same account usage check that the plan’s own tools use. That check is not a published public API, so it can change.
+Cluse is not affiliated with the company that provides the plan. The figures come from the same account usage check that the plan’s own tools use. That check is not a published public API, so it can change.
 ```
 
 ## Privacy policy URL
@@ -65,7 +65,7 @@ Each file is the widget at 3× with a margin so the rounded corners are visible.
 
 Leave the words Claude and Anthropic out of the images except where the in-app footer already says the app is not affiliated. Crop above that line if a screenshot must avoid the name.
 
-Feature graphic: `docs/play/feature-graphic.png`, 1024×500, cream background (`#faf9f5`), the terracotta gauge, and the words “Plan Pace”.
+Feature graphic: `docs/play/feature-graphic.png`, 1024×500, cream background (`#faf9f5`), the terracotta gauge, and the words “Cluse”.
 
 ## Data safety form
 
@@ -75,7 +75,7 @@ Answer from what the app actually does.
 | --- | --- |
 | Does the app collect or share any of the required user data types? | The phone stores the ntfy topic the user pastes and the usage percentages it reads from that topic. Those requests go to ntfy.sh (or the server in a pasted URL). The developer does not receive them. The phone does not send a Claude login. The camera is optional and is used only to scan a QR code; images are not stored or uploaded. |
 | Is all of the data collected by your app encrypted in transit? | Yes. The requests use HTTPS. |
-| Do you provide a way for users to request that their data be deleted? | Yes. Remove topic in the app deletes the topic and the saved usage from the phone. Uninstalling deletes the rest. There is no Plan Pace account. The Claude account is deleted on claude.ai, which the privacy policy states. |
+| Do you provide a way for users to request that their data be deleted? | Yes. Remove topic in the app deletes the topic and the saved usage from the phone. Uninstalling deletes the rest. There is no Cluse account. The Claude account is deleted on claude.ai, which the privacy policy states. |
 | Location | No. |
 | Personal info (name, email, address, phone) | Not collected by the app. |
 | Photos and videos | Not collected. Camera permission is optional, requested only when the user taps Scan QR code, and the frames are not saved. |
@@ -106,7 +106,7 @@ Blocked on purpose: overlay windows (`SYSTEM_ALERT_WINDOW`), storage, photos, vi
 
 ## Version already set for the next install
 
-`mobile/app.json` is version `1.2.0`, Android `versionCode` 5, iOS build number `2`. `versionCode` 5 is higher than the preview APK already installed, so the new package can replace it.
+`mobile/app.json` is version `1.2.0`, Android `versionCode` 6, iOS build number `2`. `versionCode` 6 is higher than the copy already installed, so the new package can replace it.
 
 The Play upload is an Android App Bundle, not an APK. From `mobile`:
 

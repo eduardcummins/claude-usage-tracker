@@ -1,6 +1,6 @@
-# Plan Pace
+# Cluse
 
-Plan Pace is a phone app that shows how much of your Claude plan is used, and when it resets. The Mac helper reads the plan on the computer (the same login Claude Code already has) and publishes a usage report about every 10 minutes. The phone reads that report over HTTPS. It does not sign in to Claude, and it does not need the ntfy app.
+Cluse is a phone app that shows how much of your Claude plan is used, and when it resets. The Mac helper reads the plan on the computer (the same login Claude Code already has) and publishes a usage report about every 10 minutes. The phone reads that report over HTTPS. It does not sign in to Claude, and it does not need the ntfy app.
 
 The numbers are the plan’s own figures: the 5-hour session and the weekly limit. When the account also returns a model-specific weekly limit, that is shown too. The app does not read chats or files.
 
@@ -25,7 +25,7 @@ irm https://raw.githubusercontent.com/eduardcummins/claude-usage-tracker/main/he
 Those commands download this project from GitHub. They only work after the repository is public. Node.js 20 or newer has to be installed first. The command prints `Phone topic:`, a QR code, and saves a larger code at `~/.claude-usage-alert/topic.html`.
 
 1. Run the command for your computer, or, if the helper is already installed, run `node helper/cli.js --init`.
-2. Open Plan Pace.
+2. Open Cluse.
 3. Paste that topic and tap **Save**, or tap **Scan QR code**.
 4. Allow notifications when the phone asks.
 
@@ -39,18 +39,18 @@ A helper that is already installed does not need to be reinstalled for the phone
 
 ### Reset notifications
 
-When a check succeeds, the app sets a notification for each reset time. That notification is stored on the phone. It can fire while Plan Pace is closed.
+When a check succeeds, the app sets a notification for each reset time. That notification is stored on the phone. It can fire while Cluse is closed.
 
-The app also checks again in the background. Android and iPhone choose when that happens. The soonest Android will allow is about 15 minutes, and it is often later. A phone in battery saver, or an app that has been force-stopped, may not run the check until you open Plan Pace. The scheduled reset notification does not depend on that background check.
+The app also checks again in the background. Android and iPhone choose when that happens. The soonest Android will allow is about 15 minutes, and it is often later. A phone in battery saver, or an app that has been force-stopped, may not run the check until you open Cluse. The scheduled reset notification does not depend on that background check.
 
-On Android 12 and newer, exact alarms need a setting: **Settings → Apps → Plan Pace → Alarms & reminders → Allow**.
+On Android 12 and newer, exact alarms need a setting: **Settings → Apps → Cluse → Alarms & reminders → Allow**.
 
 ### Android home screen widget
 
 1. Save the topic and open the app once, so the numbers are saved.
 2. Long-press the home screen.
 3. Tap **Widgets**.
-4. Add **Plan Pace**.
+4. Add **Cluse**.
 
 The widget shows a horizontal bar for the 5-hour session and one for the weekly limit. A marker sits at the current percent, and each bar has the percent and the reset countdown. It follows the phone’s light or dark theme. Tapping it opens the app. It updates when the app checks, and Android may also refresh it about every 30 minutes.
 
@@ -58,13 +58,13 @@ There is no iPhone widget in this version.
 
 ## Build and install
 
-The app name on the phone is **Plan Pace**. The Android package id is still `com.eduardcummins.claudeusage`, so a new build can replace the copy already installed. Do not change that package id if you want the upgrade to keep the same install.
+The app name on the phone is **Cluse**. The Android package id is still `com.eduardcummins.claudeusage`, so a new build can replace the copy already installed. Do not change that package id if you want the upgrade to keep the same install.
 
 These commands run on a computer, in this project folder. They upload the project to Expo’s build servers. They do not upload your Claude login.
 
 ### An APK you install yourself
 
-This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `5`.
+This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `6`.
 
 ```bash
 cd mobile
@@ -155,10 +155,10 @@ Usage updates are on `<topic>-data`, not on the topic you pasted. The pasted top
 The last report is more than about 30 minutes old. Wake the Mac. The last percents stay on screen.
 
 **A reset time arrived and the phone stayed quiet.**  
-Allow notifications for Plan Pace. On Android 12 or newer, also allow Alarms & reminders. Then open the app once so it can set the alarms again.
+Allow notifications for Cluse. On Android 12 or newer, also allow Alarms & reminders. Then open the app once so it can set the alarms again.
 
 **The widget is blank or still asks for a topic.**  
-Open Plan Pace, wait until the meters appear, then add the widget again if it was added before the first report.
+Open Cluse, wait until the meters appear, then add the widget again if it was added before the first report.
 
 **A new APK will not install over the old one.**  
 The package id must stay `com.eduardcummins.claudeusage`, and `android.versionCode` must be higher than the installed app. Do not delete the old app first if you want to keep the saved topic.
@@ -168,7 +168,7 @@ The package id must stay `com.eduardcummins.claudeusage`, and `android.versionCo
 The prepared answers are in [docs/play-console.md](docs/play-console.md). Two limits are worth knowing before you pay for a Play account:
 
 - The helper’s usage check is not a published public API. The phone stops getting new numbers if Anthropic changes that endpoint. The listing should say so.
-- Do not use the Claude or Anthropic name, or the Claude asterisk, as the store name or the icon. The name to use is **Plan Pace**. The icon is an original gauge.
+- Do not use the Claude or Anthropic name, or the Claude asterisk, as the store name or the icon. The name to use is **Cluse**. The icon is an original gauge.
 
 Play Console costs 25 USD once. The signup page can show that fee in local currency.
 
@@ -185,7 +185,7 @@ node helper/cli.js --init
 
 `--doctor` prints the plan usage and does not contact the phone. `--init` creates a private ntfy topic. That topic is a password for the usage percentages. It is stored on the computer, not in this repo. Do not commit it.
 
-The phone does not need the ntfy app. Paste the phone topic into Plan Pace. A test alert goes to the topic itself; the usage numbers go to the same topic with `-data` on the end:
+The phone does not need the ntfy app. Paste the phone topic into Cluse. A test alert goes to the topic itself; the usage numbers go to the same topic with `-data` on the end:
 
 ```bash
 node helper/cli.js --test-alert
@@ -236,7 +236,7 @@ npm test --prefix mobile
 
 | Goal | What you create | Cost |
 | --- | --- | --- |
-| Use Plan Pace on Android, installed from a link | The free Expo account at [expo.dev/signup](https://expo.dev/signup), if you do not already have one | $0. The free plan includes 15 Android builds a month. A free build waits in the slow queue. |
+| Use Cluse on Android, installed from a link | The free Expo account at [expo.dev/signup](https://expo.dev/signup), if you do not already have one | $0. The free plan includes 15 Android builds a month. A free build waits in the slow queue. |
 | Put it on Google Play | A Play Console account, plus the Expo account for the build | 25 USD once for Play. The Expo free plan is enough for the build. |
 | iPhone TestFlight | The Expo account and the Apple Developer Program | 99 USD per year for Apple. |
 | iPhone, free, expires in 7 days | The Apple ID already on the phone, and Xcode | $0. Install again from the Mac after 7 days. |
@@ -245,4 +245,4 @@ An Expo Starter plan is 19 USD per month. Get it only if that month’s 15 Andro
 
 The EAS project is already linked in `mobile/app.json` (`owner` `edcrypto`, project `claude-usage`). That project id is not a password. Do not put a Claude token, an ntfy topic, or a keystore password in the repo.
 
-The Android preview APK command is `npm run build:android` in `mobile/`. The Play Store file is an Android App Bundle from `npm run build:play`, which uses the `production` profile in `mobile/eas.json` (`buildType` `app-bundle`). `android.versionCode` is `5`. The app version is `1.2.0`.
+The Android preview APK command is `npm run build:android` in `mobile/`. The Play Store file is an Android App Bundle from `npm run build:play`, which uses the `production` profile in `mobile/eas.json` (`buildType` `app-bundle`). `android.versionCode` is `6`. The app version is `1.2.0`.

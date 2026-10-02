@@ -28,7 +28,7 @@ export function UsageWidget({
   return (
     <FlexWidget
       clickAction="OPEN_APP"
-      accessibilityLabel="Plan Pace"
+      accessibilityLabel="Cluse"
       style={{
         height: 'match_parent',
         width: 'match_parent',
@@ -47,7 +47,7 @@ export function UsageWidget({
           alignItems: 'center',
         }}
       >
-        <TextWidget text="Plan Pace" style={{ fontSize: metrics.title, color: colors.muted }} />
+        <TextWidget text="Cluse" style={{ fontSize: metrics.title, color: colors.muted }} />
         <TextWidget text={cache.plan || ''} style={{ fontSize: metrics.title, color: colors.accent }} />
       </FlexWidget>
       {cache.signedIn ? (
@@ -78,7 +78,7 @@ export function UsageWidget({
         </FlexWidget>
       ) : (
         <FlexWidget style={{ flex: 1, justifyContent: 'center', width: 'match_parent' }}>
-          <TextWidget text="Add your topic in Plan Pace." style={{ fontSize: metrics.label, color: colors.ink }} />
+          <TextWidget text="Add your topic in Cluse." style={{ fontSize: metrics.label, color: colors.ink }} />
         </FlexWidget>
       )}
     </FlexWidget>

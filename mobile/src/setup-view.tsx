@@ -42,7 +42,7 @@ export function SetupFlow({
   return (
     <View>
       <View style={styles.header}>
-        <Text style={styles.brand}>Plan Pace</Text>
+        <Text style={styles.brand}>Cluse</Text>
         <Pressable onPress={onHelp} hitSlop={12}>
           <Text style={styles.headerLink}>Help</Text>
         </Pressable>
@@ -60,7 +60,7 @@ export function SetupFlow({
         <View>
           <Text style={styles.title}>Your plan, on your phone</Text>
           <Text style={styles.lede}>
-            Plan Pace shows how much of the 5-hour session and the weekly limit is used, and when each one resets.
+            Cluse shows how much of the 5-hour session and the weekly limit is used, and when each one resets.
           </Text>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>No Claude login on this phone</Text>

@@ -11,6 +11,7 @@ test('the topic QR is a scannable code and the page keeps the topic on disk', as
   const topic = 'cu-exampletopic';
   const qr = renderTopicQr(topic);
   assert.match(qr.html, new RegExp(topic));
+  assert.match(qr.html, /Cluse/);
   assert.match(qr.svg, /<svg/);
   assert.match(qr.terminal, /\u001B\[40m/);
 
