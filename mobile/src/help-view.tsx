@@ -16,7 +16,7 @@ const ITEMS = [
   },
   {
     title: 'The numbers look old',
-    body: 'The last report is more than about 30 minutes old. The computer may be asleep. The last percentages stay on screen. Wake the computer and open Plan Pace again.',
+    body: 'The last report is more than about 30 minutes old. The computer may be asleep. The last percentages stay on screen. Wake the computer and open Cluse again.',
   },
   {
     title: 'I pasted the topic and the meters stayed empty',
@@ -24,11 +24,11 @@ const ITEMS = [
   },
   {
     title: 'A reset time passed and the phone stayed quiet',
-    body: 'Allow notifications for Plan Pace. On Android 12 or newer, also allow Alarms & reminders. Open the app once so it can set the alarms again.',
+    body: 'Allow notifications for Cluse. On Android 12 or newer, also allow Alarms & reminders. Open the app once so it can set the alarms again.',
   },
   {
     title: 'The home screen widget is empty',
-    body: 'Open Plan Pace until the meters appear, then add the widget. Long-press the home screen, tap Widgets, and choose Plan Pace.',
+    body: 'Open Cluse until the meters appear, then add the widget. Long-press the home screen, tap Widgets, and choose Cluse.',
   },
   {
     title: 'Scanning did not work',
@@ -45,7 +45,7 @@ export function HelpBody({ colors, onBack }: { colors: Palette; onBack: () => vo
       </Pressable>
       <Text style={styles.title}>Help</Text>
       <Text style={styles.lede}>
-        Plan Pace reads a usage report from your own computer. It does not sign in to Claude on this phone.
+        Cluse reads a usage report from your own computer. It does not sign in to Claude on this phone.
       </Text>
       {ITEMS.map((item) => (
         <View key={item.title} style={styles.card}>
@@ -53,7 +53,7 @@ export function HelpBody({ colors, onBack }: { colors: Palette; onBack: () => vo
           <Text style={styles.body}>{item.body}</Text>
         </View>
       ))}
-      <Text style={styles.footer}>Plan Pace is not affiliated with Anthropic.</Text>
+      <Text style={styles.footer}>Cluse is not affiliated with Anthropic.</Text>
     </View>
   );
 }

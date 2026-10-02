@@ -134,7 +134,7 @@ function WidgetCard({ scheme }: { scheme: WidgetScheme }) {
       }}
     >
       <View style={widget.row}>
-        <Text style={{ color: colors.muted, fontSize: metrics.title }}>Plan Pace</Text>
+        <Text style={{ color: colors.muted, fontSize: metrics.title }}>Cluse</Text>
         <Text style={{ color: colors.accent, fontSize: metrics.title }}>Pro</Text>
       </View>
       <PreviewMeter label="5-hour" percent={16} when="resets in 3h 12m" inner={inner} scheme={scheme} />

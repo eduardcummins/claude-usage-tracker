@@ -16,7 +16,7 @@ export function LoadingView({ colors }: { colors: Palette }) {
   const styles = makeStyles(colors);
   return (
     <View style={styles.loading}>
-      <Text style={styles.brand}>Plan Pace</Text>
+      <Text style={styles.brand}>Cluse</Text>
       <ActivityIndicator color={colors.accent} style={{ marginTop: 28 }} />
       <Text style={styles.quiet}>Reading the latest report</Text>
     </View>
@@ -54,7 +54,7 @@ export function UsageHome({
   return (
     <View>
       <View style={styles.header}>
-        <Text style={styles.brand}>Plan Pace</Text>
+        <Text style={styles.brand}>Cluse</Text>
         <Pressable onPress={onHelp} hitSlop={12}>
           <Text style={styles.headerLink}>Help</Text>
         </Pressable>

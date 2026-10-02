@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Plan Pace",
+    "name": "Cluse",
     "slug": "claude-usage",
     "scheme": "planpace",
     "version": "1.2.0",
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.eduardcummins.claudeusage",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#faf9f5",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -57,7 +57,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Plan Pace uses the camera only to scan the topic code from your computer.",
+          "cameraPermission": "Cluse uses the camera only to scan the topic code from your computer.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
@@ -83,7 +83,7 @@
           "widgets": [
             {
               "name": "PlanPace",
-              "label": "Plan Pace",
+              "label": "Cluse",
               "minWidth": "250dp",
               "minHeight": "140dp",
               "targetCellWidth": 4,

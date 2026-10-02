@@ -38,7 +38,7 @@ export default function ScanScreen() {
       {permission && !permission.granted ? (
         <View style={styles.prompt}>
           <Text style={[styles.lede, { color: colors.text }]}>
-            Plan Pace needs the camera for this scan only.
+            Cluse needs the camera for this scan only.
           </Text>
           <Pressable style={[styles.primary, { backgroundColor: colors.accent }]} onPress={() => void requestPermission()}>
             <Text style={[styles.primaryLabel, { color: colors.accentText }]}>Allow camera</Text>

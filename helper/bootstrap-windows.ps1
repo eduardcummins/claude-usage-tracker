@@ -1,4 +1,4 @@
-# Downloads Plan Pace and prints the phone topic. Meant to be run with:
+# Downloads Cluse and prints the phone topic. Meant to be run with:
 #   irm https://raw.githubusercontent.com/eduardcummins/claude-usage-tracker/main/helper/bootstrap-windows.ps1 | iex
 $ErrorActionPreference = "Stop"
 
@@ -19,7 +19,7 @@ $src = Join-Path $root "src"
 $zip = Join-Path $env:TEMP "plan-pace-main.zip"
 $url = "https://github.com/eduardcummins/claude-usage-tracker/archive/refs/heads/main.zip"
 
-Write-Host "Downloading the Plan Pace helper..."
+Write-Host "Downloading the Cluse helper..."
 try {
   Invoke-WebRequest -Uri $url -OutFile $zip
 } catch {
@@ -43,4 +43,4 @@ $cli = Join-Path $src "helper\cli.js"
 node $cli --init
 & (Join-Path $src "helper\install-windows.ps1")
 Write-Host ""
-Write-Host "Leave this PC awake. Plan Pace on the phone reads a new report about every 10 minutes."
+Write-Host "Leave this PC awake. Cluse on the phone reads a new report about every 10 minutes."

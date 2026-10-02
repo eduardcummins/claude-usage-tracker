@@ -139,7 +139,7 @@ async function printTopic(deps, config) {
   deps.log('');
   deps.log(page.terminal);
   deps.log('');
-  deps.log('On the phone, open Plan Pace, paste the phone topic, or scan the code above.');
+  deps.log('On the phone, open Cluse, paste the phone topic, or scan the code above.');
   deps.log(`A larger code is saved at ${page.file}`);
   deps.log('The ntfy app is not required.');
   deps.log('Treat the topic like a password. Anyone who knows it can see usage percentages.');
@@ -157,7 +157,7 @@ async function sendTestAlert(deps) {
     token: config.ntfyToken,
     fetch: deps.fetch,
   });
-  deps.log('Sent a test alert to the phone topic. Plan Pace reads usage from the matching -data topic.');
+  deps.log('Sent a test alert to the phone topic. Cluse reads usage from the matching -data topic.');
   return 0;
 }
 
