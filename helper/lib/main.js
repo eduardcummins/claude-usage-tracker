@@ -52,7 +52,7 @@ When a 5-hour or weekly limit resets, it sends an alert.
       macOS: check every 10 minutes in the background (launchd).
 
   node helper/cli.js uninstall-mac
-      macOS: stop the background check.
+      macOS: stop the background check. To remove everything: bash helper/uninstall-mac.sh
 
   node helper/cli.js --mock --dry-run
       Show sample usage without a Claude login and without sending anything.

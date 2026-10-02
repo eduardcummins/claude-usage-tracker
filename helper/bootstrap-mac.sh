@@ -40,3 +40,5 @@ node "$ROOT/helper/cli.js" install-mac
 echo ""
 echo "Done. Cluse works whenever this Mac is awake: it checks about every 10 minutes and lets you know when your limits reset."
 echo "Scan the pairing code in Cluse. A topic that starts with cu- still works."
+echo "To remove Cluse from this Mac later, run this in Terminal:"
+echo "  curl -fsSL https://raw.githubusercontent.com/eduardcummins/claude-usage-tracker/main/helper/uninstall-mac.sh | bash"
