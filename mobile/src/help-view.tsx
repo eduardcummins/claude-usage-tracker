@@ -12,7 +12,7 @@ const ITEMS = [
   },
   {
     title: 'No report yet',
-    body: 'The computer sends one about every 10 minutes, and only while it is awake and Claude Code is signed in. Run the helper once, then tap Check now.',
+    body: 'The computer sends one about every 10 minutes whenever it is awake and Claude Code is signed in. Run the helper once, then tap Check now.',
   },
   {
     title: 'The numbers look old',
@@ -32,7 +32,7 @@ const ITEMS = [
   },
   {
     title: 'Scanning did not work',
-    body: 'The camera is used only to read the QR code. The picture is not saved. If the code in the terminal is too small, open the topic.html file the helper saved and scan that, or paste the topic.',
+    body: 'The camera is used only to read the QR code. The picture is not saved. If the code in Terminal or PowerShell is too small, open the topic.html file the helper saved and scan that, or paste the topic.',
   },
 ];
 

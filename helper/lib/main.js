@@ -26,11 +26,11 @@ const NOT_LOGGED_IN = `Claude Code is not logged in on this computer.
 On a Mac, this helper reads the login from the macOS Keychain, which is where Claude Code stores it.
 On Windows and Linux, it reads .credentials.json inside the Claude config folder (usually ~/.claude, or %USERPROFILE%\\.claude).
 
-Open Claude Code in VS Code, sign in with your Claude plan (Pro, Max, Team, or Enterprise), send one message, then run this command again.`;
+Open Claude Code in VS Code, sign in with your paid Claude subscription, send one message, then run this command again.`;
 
 export const HELP = `Claude usage alert helper
 
-Checks the Claude plan limits on this computer and sends them to your phone.
+Checks the Claude usage limits on this computer and sends them to your phone.
 When a 5-hour or weekly limit resets, it sends an alert.
 
   node helper/cli.js --doctor
@@ -239,7 +239,7 @@ export async function runCheck(deps, args) {
     }
     if (parsed.windows.length === 0) {
       throw new UserError(
-        'The usage response did not include any plan limits. This usually means the account is not signed in with a Pro, Max, Team, or Enterprise plan.',
+        'The usage response did not include any usage limits. This usually means the account is not signed in with a paid Claude subscription.',
       );
     }
 
@@ -257,7 +257,6 @@ export async function runCheck(deps, args) {
     const alerts = unseenResets(detectResetWindows(previous, snapshot.windows), state.notifiedResets);
     const alert = alerts.length > 0 ? alertCopy(alerts, timeZone) : null;
 
-    if (snapshot.plan) deps.log(`Plan: ${snapshot.plan}`);
     deps.log(snapshot.windows.map((window) => describeWindow(window, now, timeZone)).join('\n'));
     if (snapshot.extraUsageLabel) deps.log(snapshot.extraUsageLabel);
     if (alert) deps.log(`Alert: ${alert.title}`);
@@ -321,8 +320,7 @@ async function doctor(deps) {
     const now = currentTime(deps);
     const where = creds.source === 'keychain' ? 'the macOS Keychain' : creds.filePath;
     deps.log(`Login: found in ${where}.`);
-    deps.log(`Plan: ${formatPlan(creds.subscriptionType, creds.rateLimitTier) || 'Claude plan'}`);
-    if (parsed.windows.length === 0) deps.log('No plan limits were returned.');
+    if (parsed.windows.length === 0) deps.log('No usage limits were returned.');
     else deps.log(parsed.windows.map((window) => describeWindow(window, now, 'Europe/London')).join('\n'));
     if (parsed.extraUsage) {
       deps.log(`Extra usage: $${parsed.extraUsage.usedUsd.toFixed(2)} of $${parsed.extraUsage.limitUsd.toFixed(2)}`);

@@ -25,7 +25,7 @@ Register-ScheduledTask `
   -Action $action `
   -Trigger $trigger `
   -Settings $settings `
-  -Description "Check Claude plan usage and send a phone alert when it resets." `
+  -Description "Check Claude usage limits and send a phone alert when they reset." `
   -Force | Out-Null
 
 Write-Host "Installed. Task Scheduler will run the helper every 10 minutes while you are logged in."

@@ -1,8 +1,8 @@
 # Cluse
 
-Cluse is a phone app that shows how much of your Claude plan is used, and when it resets. The Mac helper reads the plan on the computer (the same login Claude Code already has) and publishes a usage report about every 10 minutes. The phone reads that report over HTTPS. It does not sign in to Claude, and it does not need the ntfy app.
+Cluse shows how much of your 5-hour and weekly Claude limits you've used, and lets you know when they reset. The Mac helper reads your usage on the computer (the same login Claude Code already has) and publishes a usage report about every 10 minutes. The phone reads that report over HTTPS. It does not sign in to Claude, and it does not need the ntfy app.
 
-The numbers are the plan’s own figures: the 5-hour session and the weekly limit. When the account also returns a model-specific weekly limit, that is shown too. The app does not read chats or files.
+The numbers are Claude’s own figures: the 5-hour session and the weekly limit. When the account also returns a model-specific weekly limit, that is shown too. The app does not read chats or files.
 
 ## Connect the phone
 
@@ -146,7 +146,7 @@ Scan the QR code with the iPhone camera or with Expo Go on Android. The phone an
 Paste the phone topic only, or the full `https://ntfy.sh/<topic>` URL. A topic ending in `-data` is accepted; the app strips that suffix and reads the data topic itself.
 
 **The screen says there is no report yet.**  
-The Mac sends one about every 10 minutes, and only while it is awake. Run `node helper/cli.js` once on the Mac and tap **Check now**.
+The Mac sends one about every 10 minutes whenever it is awake. Run `node helper/cli.js` once on the Mac and tap **Check now**.
 
 **Polling the topic in a browser returns nothing.**  
 Usage updates are on `<topic>-data`, not on the topic you pasted. The pasted topic is for reset alerts. The app adds `-data` itself. ntfy.sh keeps messages for about 12 hours, so the app asks for `since=12h` and uses the newest snapshot.
@@ -187,7 +187,7 @@ node helper/cli.js --doctor
 node helper/cli.js --init
 ```
 
-`--doctor` prints the plan usage and does not contact the phone. `--init` creates a private ntfy topic. That topic is a password for the usage percentages. It is stored on the computer, not in this repo. Do not commit it.
+`--doctor` prints the usage and does not contact the phone. `--init` creates a private ntfy topic. That topic is a password for the usage percentages. It is stored on the computer, not in this repo. Do not commit it.
 
 The phone does not need the ntfy app. Scan the pairing code, or paste it. A plain cu- topic still works. Usage is published to the topic with `-data` on the end. Reset alerts stay on the phone:
 
@@ -223,7 +223,7 @@ bash helper/install-linux.sh
 
 The helper checks about every 10 minutes while you are logged in and the computer is awake. A reset is reported when the reset time moves forward. The first check does not alert.
 
-**`--doctor` says you are not logged in.** Open Claude Code, sign in with the Claude plan, send one message, and try again. An API key has no 5-hour plan window.
+**`--doctor` says you are not logged in.** Open Claude Code, sign in with your Claude subscription, send one message, and try again. An API key has no 5-hour usage window.
 
 **`--doctor` says the login refresh was rejected.** Sign in to Claude Code again. The helper does not delete that login.
 

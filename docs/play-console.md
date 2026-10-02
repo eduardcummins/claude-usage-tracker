@@ -18,19 +18,21 @@ Use this when filling in Play Console. The app id stays `com.eduardcummins.claud
 80 characters is the limit.
 
 ```text
-Session and weekly plan usage, and when each limit resets.
+Your 5-hour and weekly usage limits, and when each one resets.
 ```
 
 ## Full description
 
 ```text
-Cluse shows two rings: the 5-hour session and the weekly limit. Each one shows the percent used, a countdown, and the reset time in your local time. You can get a notification when a limit resets. On Android, a home screen widget shows a horizontal bar for each, with a marker at the current percent and the reset countdown.
+Cluse shows how much of your 5-hour and weekly Claude limits you've used, and lets you know when they reset. Each limit shows the percent used, a countdown, and the reset time in your local time. You get a notification when a limit resets. On Android, simple home screen widgets show the same numbers at a glance.
 
-The phone does not sign in. A small helper on your Mac or Windows computer reads the plan you already use there and publishes the percentages. The app’s first screen gives you one command to copy. It installs the helper and prints a topic. Paste that topic, or scan the QR code. The ntfy app is not required.
+The phone does not sign in. A small helper on your Mac or Windows computer reads the usage from the Claude Code login already there and publishes the percentages, encrypted. The app gives you one command to copy: run it in Terminal on a Mac, or in PowerShell on Windows. It installs the helper and prints a pairing code. Paste that code, or scan the QR code. After that it works whenever your computer is awake. The ntfy app is not required.
 
 Cluse does not read chats or files, and it does not send your usage to the person who published the app. The camera is used only if you choose to scan the QR code. The picture is not saved.
 
-Cluse is not affiliated with the company that provides the plan. The figures come from the same account usage check that the plan’s own tools use. That check is not a published public API, so it can change.
+Cluse is not affiliated with Anthropic. The figures come from the same account usage check that Claude Code uses. That check is not a published public API, so it can change.
+
+Questions or feedback: eduardcummins@gmail.com
 ```
 
 ## Privacy policy URL
@@ -57,9 +59,9 @@ The same folder also has `phone-topic.png`, `phone-stale.png`, `phone-waiting.pn
 
 Home screen widget renders, light and dark, with the marker on each bar:
 
-- `widget-rings-light.png` and `widget-rings-dark.png` — the wide 4×2 rings, recent checks, and Check now button. `widget-card.png` is the light copy.
+- `widget-rings-light.png` and `widget-rings-dark.png` — the wide 4×2 rings with reset countdowns and a Check now link. `widget-card.png` is the light copy.
 - `widget-compact-light.png` and `widget-compact-dark.png` — the 2×2 session widget.
-- `widget-bars-light.png` and `widget-bars-dark.png` — the older bar layout, still offered as Cluse bars.
+- `widget-bars-light.png` and `widget-bars-dark.png` — the bar layout, offered as Cluse bars.
 - `widget-250x140-light.png`, `widget-320x140-light.png`, and `widget-420x180-light.png`, with dark copies — the wide rings at a few home-screen sizes.
 
 Each file is the widget at 3× with a margin so the rounded corners are visible. The Android widget picker image is `mobile/assets/widget-preview.png`.
@@ -107,7 +109,7 @@ Blocked on purpose: overlay windows (`SYSTEM_ALERT_WINDOW`), storage, photos, vi
 
 ## Version already set for the next install
 
-`mobile/app.json` is version `1.2.0`, Android `versionCode` 8, iOS build number `2`. `versionCode` 8 is higher than the copy already installed, so the new package can replace it.
+`mobile/app.json` is version `1.3.0`, Android `versionCode` 9, iOS build number `2`. `versionCode` 9 is higher than the copy already installed, so the new package can replace it.
 
 The Play upload is an Android App Bundle, not an APK. From `mobile`:
 

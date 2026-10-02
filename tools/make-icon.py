@@ -49,7 +49,8 @@ def main():
     draw = ImageDraw.Draw(graphic)
     title = ImageFont()
     draw.text((500, 170), "Cluse", font=title[0], fill=(20, 20, 19))
-    draw.text((504, 290), "Session and weekly plan usage", font=title[1], fill=(107, 106, 100))
+    draw.text((504, 290), "5-hour and weekly limits,", font=title[1], fill=(107, 106, 100))
+    draw.text((504, 336), "and when they reset", font=title[1], fill=(107, 106, 100))
     graphic.save(root / "docs" / "play" / "feature-graphic.png")
 
 

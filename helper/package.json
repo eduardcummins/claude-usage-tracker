@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Reads Claude plan usage on this computer and sends a phone alert when a limit resets.",
+  "description": "Reads Claude usage limits on this computer and sends a phone alert when a limit resets.",
   "engines": {
     "node": ">=20"
   },

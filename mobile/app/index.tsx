@@ -7,6 +7,7 @@ import { ensureBackground } from '../src/register-background';
 import { forgetTopic, runSync } from '../src/sync-runner';
 import { bodyFont, dark, light } from '../src/theme';
 import { LoadingView, UsageHome } from '../src/usage-view';
+import { FeedbackButton } from '../src/feedback-button';
 
 export default function HomeScreen() {
   const colors = useColorScheme() === 'dark' ? dark : light;
@@ -131,6 +132,7 @@ export default function HomeScreen() {
           each reset time. Allow notifications
           {Platform.OS === 'android' ? ', and on Android 12 or newer allow Alarms & reminders' : ''}.
         </Text>
+        <FeedbackButton colors={colors} />
         <Text style={[styles.footer, { color: colors.muted }]}>Cluse is not affiliated with Anthropic.</Text>
       </ScrollView>
     </SafeAreaView>

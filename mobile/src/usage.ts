@@ -84,7 +84,7 @@ export function resetNotification(windows: UsageWindow[]): { title: string; body
   }
   const lines = windows.map((window) => `${window.label}: now ${window.usedPercent}%`);
   return {
-    title: 'Plan limits reset',
+    title: 'Claude limits reset',
     body: lines.join('\n'),
   };
 }
