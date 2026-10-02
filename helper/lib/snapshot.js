@@ -1,3 +1,22 @@
+export const LOGIN_WAIT_NOTICE = 'waiting for Claude Code login';
+
+export function waitingSnapshot({ now, timeZone, lastSnapshot, history }) {
+  const fetchedAt = lastSnapshot?.fetchedAt || new Date(now).toISOString();
+  return {
+    v: 1,
+    type: 'snapshot',
+    status: 'waiting-login',
+    notice: LOGIN_WAIT_NOTICE,
+    fetchedAt,
+    checkedAt: new Date(now).toISOString(),
+    plan: lastSnapshot?.plan || null,
+    timeZone: timeZone || 'Europe/London',
+    windows: Array.isArray(lastSnapshot?.windows) ? lastSnapshot.windows : [],
+    extraUsageLabel: lastSnapshot?.extraUsageLabel || null,
+    recent: Array.isArray(history) ? history.slice(-18) : [],
+  };
+}
+
 export function buildSnapshot({ fetchedAt, plan, timeZone, parsed, history }) {
   const windows = parsed.windows;
   const point = compactPoint(fetchedAt, windows);

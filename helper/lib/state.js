@@ -8,6 +8,9 @@ export function emptyState() {
     history: [],
     notifiedResets: {},
     backoffUntil: null,
+    backoffAccessFingerprint: null,
+    tokenBackoffUntil: null,
+    tokenBackoffAttempt: 0,
   };
 }
 
@@ -22,6 +25,9 @@ export async function loadState(file) {
       history: Array.isArray(data.history) ? data.history : [],
       notifiedResets: data.notifiedResets && typeof data.notifiedResets === 'object' ? data.notifiedResets : {},
       backoffUntil: data.backoffUntil || null,
+      backoffAccessFingerprint: data.backoffAccessFingerprint || null,
+      tokenBackoffUntil: data.tokenBackoffUntil || null,
+      tokenBackoffAttempt: Number(data.tokenBackoffAttempt) || 0,
     };
   } catch (err) {
     if (err && err.code !== 'ENOENT') {

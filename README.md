@@ -64,7 +64,7 @@ These commands run on a computer, in this project folder. They upload the projec
 
 ### An APK you install yourself
 
-This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `7`.
+This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `8`.
 
 ```bash
 cd mobile
@@ -249,4 +249,4 @@ An Expo Starter plan is 19 USD per month. Get it only if that month’s 15 Andro
 
 The EAS project is already linked in `mobile/app.json` (`owner` `edcrypto`, project `claude-usage`). That project id is not a password. Do not put a Claude token, an ntfy topic, or a keystore password in the repo.
 
-The Android preview APK command is `npm run build:android` in `mobile/`. The Play Store file is an Android App Bundle from `npm run build:play`, which uses the `production` profile in `mobile/eas.json` (`buildType` `app-bundle`). `android.versionCode` is `7`. The app version is `1.2.0`.
+The Android preview APK command is `npm run build:android` in `mobile/`. The Play Store file is an Android App Bundle from `npm run build:play`, which uses the `production` profile in `mobile/eas.json` (`buildType` `app-bundle`). `android.versionCode` is `8`. The app version is `1.2.0`.

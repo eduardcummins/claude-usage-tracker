@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,9 +17,9 @@ import { formatPlan, parseUsageResponse } from './parse-usage.js';
 import { appPaths } from './paths.js';
 import { redact } from './redact.js';
 import { alertCopy, detectResetWindows, previousWindows, unseenResets } from './resets.js';
-import { buildSnapshot, fitSnapshot } from './snapshot.js';
+import { buildSnapshot, fitSnapshot, waitingSnapshot } from './snapshot.js';
 import { loadState, saveState } from './state.js';
-import { describeWindow } from './time.js';
+import { describeWindow, expiryMs, tokenStillValid } from './time.js';
 
 const NOT_LOGGED_IN = `Claude Code is not logged in on this computer.
 
@@ -202,14 +203,30 @@ export async function runCheck(deps, args) {
     const mode = args.mock ? 'mock' : 'live';
     const state = await loadState(appPaths(deps.homeDir).state);
     if (!args.mock && state.backoffUntil && Date.parse(state.backoffUntil) > now) {
-      deps.log(`Skipping this check. The usage endpoint asked us to wait until ${state.backoffUntil}.`);
-      return 0;
+      const loaded = await loadCredentials(deps);
+      const changed = loaded
+        && state.backoffAccessFingerprint
+        && tokenFingerprint(loaded.accessToken) !== state.backoffAccessFingerprint;
+      if (!changed) {
+        deps.log(`Skipping this check. The usage endpoint asked us to wait until ${state.backoffUntil}.`);
+        return 0;
+      }
     }
 
     const usage = args.mock ? await loadFixture(args.scenario) : await loadLiveUsage(deps);
+    if (usage.kind === 'login-wait') {
+      if (args.dryRun) {
+        deps.log('Waiting for Claude Code login. Dry run: nothing was sent.');
+        return 0;
+      }
+      return publishLoginWait(deps, state, now, usage.until);
+    }
     if (usage.kind === 'rate-limited') {
       const until = new Date(now + usage.retryAfterSec * 1000).toISOString();
-      await saveState(appPaths(deps.homeDir).state, { ...state, backoffUntil: until });
+      await storeState(deps, {
+        backoffUntil: until,
+        backoffAccessFingerprint: usage.accessFingerprint || null,
+      });
       deps.log(`Anthropic asked us to slow down. Next try after ${until}. Your last numbers are unchanged.`);
       return 0;
     }
@@ -265,16 +282,20 @@ export async function runCheck(deps, args) {
 
     const notified = { ...state.notifiedResets };
     for (const window of alerts) notified[window.id] = window.resetsAt;
-    await saveState(appPaths(deps.homeDir).state, {
+    await storeState(deps, {
       mode,
       lastSnapshot: {
         fetchedAt: snapshot.fetchedAt,
         plan: snapshot.plan,
         windows: snapshot.windows,
+        extraUsageLabel: snapshot.extraUsageLabel,
       },
       history: [...state.history, point].slice(-200),
       notifiedResets: notified,
       backoffUntil: null,
+      backoffAccessFingerprint: null,
+      tokenBackoffUntil: null,
+      tokenBackoffAttempt: 0,
     });
     deps.log('Sent the usage update.');
     return 0;
@@ -286,6 +307,12 @@ async function doctor(deps) {
     const loaded = await loadCredentials(deps);
     if (!loaded) throw new UserError(NOT_LOGGED_IN);
     const { creds, result } = await authorizedUsage(loaded, deps);
+    if (result.kind === 'login-wait') {
+      const when = result.until ? ` The next refresh attempt is after ${result.until}.` : '';
+      deps.log(`Waiting for Claude Code login. Open Claude Code on this computer to refresh.${when}`);
+      deps.log('Nothing was sent to your phone.');
+      return 0;
+    }
     if (result.kind === 'rate-limited') {
       deps.log('The usage endpoint asked us to slow down. Try again in a little while.');
       return 0;
@@ -309,7 +336,10 @@ async function loadLiveUsage(deps) {
   const loaded = await loadCredentials(deps);
   if (!loaded) throw new UserError(NOT_LOGGED_IN);
   const { creds, result } = await authorizedUsage(loaded, deps);
-  if (result.kind === 'rate-limited') return result;
+  if (result.kind === 'login-wait') return result;
+  if (result.kind === 'rate-limited') {
+    return { ...result, accessFingerprint: tokenFingerprint(creds.accessToken) };
+  }
   return {
     kind: 'ok',
     body: result.body,
@@ -319,16 +349,71 @@ async function loadLiveUsage(deps) {
 }
 
 async function authorizedUsage(loaded, deps) {
-  let creds = await ensureFreshCredentials(loaded, deps).catch(refreshFailure);
-  let result = await requestUsage(creds, deps);
-  if (result.kind === 'unauthorized') {
-    creds = await ensureFreshCredentials(creds, deps, { force: true }).catch(refreshFailure);
-    result = await requestUsage(creds, deps);
+  try {
+    let creds = await ensureFreshCredentials(loaded, deps);
+    if (!usableAccess(creds, deps)) return { creds, result: { kind: 'login-wait', until: null } };
+    let result = await requestUsage(creds, deps);
+    if (result.kind === 'unauthorized') {
+      creds = await ensureFreshCredentials(creds, deps, { force: true });
+      if (!usableAccess(creds, deps)) return { creds, result: { kind: 'login-wait', until: null } };
+      result = await requestUsage(creds, deps);
+    }
+    if (result.kind === 'unauthorized') {
+      throw new UserError('Claude rejected the login. Open Claude Code and sign in again, then rerun this helper.');
+    }
+    return { creds, result };
+  } catch (err) {
+    if (err && err.code === 'refresh_deferred') {
+      return { creds: loaded, result: { kind: 'login-wait', until: err.until || null } };
+    }
+    if (err && err.code === 'refresh_rejected') {
+      throw new UserError('Claude rejected the login refresh. Open Claude Code and sign in again, then rerun this helper.');
+    }
+    throw err;
   }
-  if (result.kind === 'unauthorized') {
-    throw new UserError('Claude rejected the login. Open Claude Code and sign in again, then rerun this helper.');
+}
+
+async function publishLoginWait(deps, state, now, until) {
+  const when = until ? ` Next login refresh attempt after ${until}.` : '';
+  deps.log(`Waiting for Claude Code login.${when} The last known numbers stay on the phone.`);
+  const config = await readConfig(deps.homeDir);
+  if (!config) {
+    deps.log('No phone topic yet, so the status was not sent.');
+    return 0;
   }
-  return { creds, result };
+  const snapshot = fitSnapshot(waitingSnapshot({
+    now,
+    timeZone: config.timeZone || 'Europe/London',
+    lastSnapshot: state.lastSnapshot,
+    history: state.history,
+  }));
+  const encrypted = Boolean(config.ntfyKey);
+  await publishNtfy({
+    server: config.ntfyServer,
+    topic: dataTopic(config.ntfyTopic),
+    title: 'Cluse',
+    message: encrypted ? JSON.stringify(sealJson(config.ntfyKey, snapshot)) : JSON.stringify(snapshot),
+    priority: 1,
+    tags: ['snapshot'],
+    token: config.ntfyToken,
+    fetch: deps.fetch,
+  });
+  deps.log('Sent the last known numbers.');
+  return 0;
+}
+
+async function storeState(deps, patch) {
+  const file = appPaths(deps.homeDir).state;
+  const latest = await loadState(file);
+  await saveState(file, { ...latest, ...patch });
+}
+
+function usableAccess(creds, deps) {
+  return Boolean(creds) && tokenStillValid(creds.expiresAt, currentTime(deps)) && expiryMs(creds.expiresAt) != null;
+}
+
+function tokenFingerprint(token) {
+  return createHash('sha256').update(String(token)).digest('hex').slice(0, 16);
 }
 
 async function requestUsage(creds, deps) {
@@ -343,13 +428,6 @@ async function requestUsage(creds, deps) {
     throw new UserError(`Usage check failed (${response.status}). ${redact(response.text).slice(0, 180)}`);
   }
   return { kind: 'ok', body: response.body };
-}
-
-function refreshFailure(err) {
-  if (err && err.code === 'refresh_rejected') {
-    throw new UserError('Claude rejected the login refresh. Open Claude Code and sign in again, then rerun this helper.');
-  }
-  throw err;
 }
 
 async function loadFixture(scenario) {

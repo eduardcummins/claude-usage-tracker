@@ -1,8 +1,12 @@
 import { redact } from './redact.js';
+import { parseRetryAfter } from './token-backoff.js';
 
 export const PUBLIC_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
 export const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
 
+// Claude Code's public client. The body is the refresh grant Claude Code sends.
+// A 429 stops the loop: the fallback host is only for network or server errors,
+// so one rate limit is one request, not two.
 const TOKEN_URLS = [
   'https://platform.claude.com/v1/oauth/token',
   'https://console.anthropic.com/v1/oauth/token',
@@ -64,6 +68,12 @@ export async function refreshAccessToken(refreshToken, deps) {
       if (!body.access_token) throw new Error('Claude login refresh did not return an access token.');
       return body;
     }
+    if (response.status === 429) {
+      const error = new Error(`Claude login refresh failed (429): ${redact(text).slice(0, 180)}`);
+      error.code = 'refresh_rate_limited';
+      error.retryAfterMs = parseRetryAfter(response.headers, currentTime(deps));
+      throw error;
+    }
     if (response.status === 400 || response.status === 401 || response.status === 403) {
       const error = new Error('Claude rejected the login refresh.');
       error.code = 'refresh_rejected';
@@ -72,4 +82,9 @@ export async function refreshAccessToken(refreshToken, deps) {
     lastError = new Error(`Claude login refresh failed (${response.status}): ${redact(text).slice(0, 180)}`);
   }
   throw lastError || new Error('Claude login refresh failed.');
+}
+
+function currentTime(deps) {
+  if (typeof deps?.now === 'function') return deps.now();
+  return deps?.now ?? Date.now();
 }

@@ -107,7 +107,7 @@ Blocked on purpose: overlay windows (`SYSTEM_ALERT_WINDOW`), storage, photos, vi
 
 ## Version already set for the next install
 
-`mobile/app.json` is version `1.2.0`, Android `versionCode` 7, iOS build number `2`. `versionCode` 7 is higher than the copy already installed, so the new package can replace it.
+`mobile/app.json` is version `1.2.0`, Android `versionCode` 8, iOS build number `2`. `versionCode` 8 is higher than the copy already installed, so the new package can replace it.
 
 The Play upload is an Android App Bundle, not an APK. From `mobile`:
 

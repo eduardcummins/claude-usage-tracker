@@ -5,6 +5,8 @@ import { UserError } from './errors.js';
 import { appPaths, credentialsPath } from './paths.js';
 import { redact } from './redact.js';
 import { refreshAccessToken } from './oauth.js';
+import { loadState, saveState } from './state.js';
+import { tokenBackoffDelay } from './token-backoff.js';
 import { expiryMs, tokenStillValid } from './time.js';
 
 const KEYCHAIN_SERVICE = 'Claude Code-credentials';
@@ -38,35 +40,63 @@ export function parseKeychainAccount(dump) {
   return match ? match[1] : null;
 }
 
-export async function loadCredentials(deps) {
-  if (deps.platform === 'darwin') {
-    const keychain = await readKeychain(deps);
-    if (keychain) return decorate(keychain.raw, 'keychain', { account: keychain.account });
+export function pickFreshest(candidates) {
+  let best = null;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (!best) {
+      best = candidate;
+      continue;
+    }
+    const bestExp = expiryMs(best.expiresAt);
+    const nextExp = expiryMs(candidate.expiresAt);
+    if (nextExp == null) continue;
+    if (bestExp == null || nextExp >= bestExp) best = candidate;
   }
-  const file = await readFileStore(deps);
-  if (file) return decorate(file.raw, 'file', { filePath: file.filePath });
-  return null;
+  return best;
+}
+
+export async function loadCredentials(deps) {
+  const stores = await loadStores(deps);
+  return stores.freshest;
 }
 
 export async function ensureFreshCredentials(loaded, deps, { force = false } = {}) {
   if (!loaded) return null;
   const now = currentTime(deps);
-  if (!force && tokenStillValid(loaded.expiresAt, now) && expiryMs(loaded.expiresAt) != null) {
-    return loaded;
-  }
-  if (!loaded.refreshToken) return loaded;
+  if (!force && usable(loaded, now)) return loaded;
   return withRefreshLock(deps, async () => {
-    const again = await loadCredentials(deps);
-    const current = again || loaded;
+    const stores = await loadStores(deps);
+    const current = stores.freshest || loaded;
     const now2 = currentTime(deps);
-    const rotated = force && again && again.accessToken !== loaded.accessToken;
-    if (rotated && tokenStillValid(current.expiresAt, now2)) return current;
-    if (!force && tokenStillValid(current.expiresAt, now2) && expiryMs(current.expiresAt) != null) {
-      return current;
+    const rotated = force && current.accessToken !== loaded.accessToken;
+    if (rotated && usable(current, now2)) return current;
+    if (!force && usable(current, now2)) return current;
+    if (!current.refreshToken) {
+      throw deferred(null);
     }
-    if (!current.refreshToken) return current;
-    const tokenResponse = await refreshAccessToken(current.refreshToken, deps);
-    return saveCredentials(current, tokenResponse, deps);
+    const backoff = await readTokenBackoff(deps);
+    if (backoff.until && Date.parse(backoff.until) > now2) {
+      throw deferred(backoff.until);
+    }
+    let tokenResponse;
+    try {
+      tokenResponse = await refreshAccessToken(current.refreshToken, deps);
+    } catch (err) {
+      if (err && err.code === 'refresh_rate_limited') {
+        const until = await persistTokenBackoff(deps, now2, err.retryAfterMs);
+        throw deferred(until);
+      }
+      if (err && err.code === 'refresh_rejected') {
+        const rescued = await loadStores(deps);
+        const newer = rescued.freshest;
+        if (newer && newer.accessToken !== current.accessToken && usable(newer, currentTime(deps))) {
+          return newer;
+        }
+      }
+      throw err;
+    }
+    return saveRefreshed(stores, current, tokenResponse, deps);
   });
 }
 
@@ -78,6 +108,77 @@ export async function saveCredentials(loaded, tokenResponse, deps) {
   }
   await writeFileStore(loaded.filePath, next);
   return decorate(next, 'file', { filePath: loaded.filePath });
+}
+
+async function loadStores(deps) {
+  const file = await readFileStore(deps);
+  const keychain = deps.platform === 'darwin' ? await readKeychain(deps) : null;
+  const fileCred = file ? decorate(file.raw, 'file', { filePath: file.filePath }) : null;
+  const keyCred = keychain ? decorate(keychain.raw, 'keychain', { account: keychain.account }) : null;
+  // File first, Keychain last: an equal expiry stays in the Keychain, which is where Claude Code reads it.
+  return {
+    file: fileCred,
+    keychain: keyCred,
+    freshest: pickFreshest([fileCred, keyCred]),
+  };
+}
+
+async function saveRefreshed(stores, current, tokenResponse, deps) {
+  const consumed = current.refreshToken;
+  const now = currentTime(deps);
+  const next = applyToken(current.raw, tokenResponse, now);
+  if (current.source === 'keychain') {
+    await writeKeychain(next, current.account, deps);
+  } else {
+    await writeFileStore(current.filePath, next);
+  }
+  // Update the other copy only when it held the refresh token we just used.
+  // A different token is left alone so a stale copy cannot be rotated out from under Claude Code.
+  if (stores.keychain && current.source !== 'keychain' && stores.keychain.refreshToken === consumed) {
+    await writeKeychain(applyToken(stores.keychain.raw, tokenResponse, now), stores.keychain.account, deps);
+  }
+  if (stores.file && current.source !== 'file' && stores.file.refreshToken === consumed) {
+    await writeFileStore(stores.file.filePath, applyToken(stores.file.raw, tokenResponse, now));
+  }
+  await clearTokenBackoff(deps);
+  if (current.source === 'keychain') return decorate(next, 'keychain', { account: current.account });
+  return decorate(next, 'file', { filePath: current.filePath });
+}
+
+async function readTokenBackoff(deps) {
+  const state = await loadState(appPaths(deps.homeDir).state);
+  return { until: state.tokenBackoffUntil, attempt: state.tokenBackoffAttempt || 0 };
+}
+
+async function persistTokenBackoff(deps, now, retryAfterMs) {
+  const file = appPaths(deps.homeDir).state;
+  const state = await loadState(file);
+  const attempt = (state.tokenBackoffAttempt || 0) + 1;
+  const until = new Date(now + tokenBackoffDelay(attempt, retryAfterMs)).toISOString();
+  await saveState(file, {
+    ...state,
+    tokenBackoffUntil: until,
+    tokenBackoffAttempt: attempt,
+  });
+  return until;
+}
+
+async function clearTokenBackoff(deps) {
+  const file = appPaths(deps.homeDir).state;
+  const state = await loadState(file);
+  if (!state.tokenBackoffUntil && !state.tokenBackoffAttempt) return;
+  await saveState(file, { ...state, tokenBackoffUntil: null, tokenBackoffAttempt: 0 });
+}
+
+function usable(loaded, now) {
+  return tokenStillValid(loaded.expiresAt, now) && expiryMs(loaded.expiresAt) != null;
+}
+
+function deferred(until) {
+  const error = new Error('Claude login refresh is waiting after a rate limit.');
+  error.code = 'refresh_deferred';
+  error.until = until;
+  return error;
 }
 
 async function readKeychain(deps) {
