@@ -8,16 +8,32 @@ The numbers are the plan’s own figures: the 5-hour session and the weekly limi
 
 You need the helper running on the Mac first (see [Mac helper](#mac-helper)), and the installed app (the steps are under [Build and install](#build-and-install)). Expo Go works for the screen while `npx expo start` is running. The home screen widget exists only in the installed Android app.
 
-1. On the Mac, run `node helper/cli.js --init` if you have not already. The log prints `Phone topic:` followed by a short code.
+A new install from the Play Store opens a short setup. It explains that the phone does not sign in to Claude, then shows one command.
+
+Mac, in Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eduardcummins/claude-usage-tracker/main/helper/bootstrap-mac.sh | bash
+```
+
+Windows, in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/eduardcummins/claude-usage-tracker/main/helper/bootstrap-windows.ps1 | iex
+```
+
+Those commands download this project from GitHub. They only work after the repository is public. Node.js 20 or newer has to be installed first. The command prints `Phone topic:`, a QR code, and saves a larger code at `~/.claude-usage-alert/topic.html`.
+
+1. Run the command for your computer, or, if the helper is already installed, run `node helper/cli.js --init`.
 2. Open Plan Pace.
-3. Paste that topic into the box and tap **Save**.
+3. Paste that topic and tap **Save**, or tap **Scan QR code**.
 4. Allow notifications when the phone asks.
 
 The topic is a password for the usage percentages. Anyone who knows it can read them. It is stored on the phone and on the Mac. It is not written into this project.
 
-The phone reads `https://ntfy.sh/<topic>-data/json?poll=1&since=12h`. The helper publishes the snapshot to that `-data` topic. Polling the topic without `-data` only shows reset alerts, so it looks empty when no limit has reset.
+The phone reads `https://ntfy.sh/<topic>-data/json?poll=1&since=12h`. The helper publishes the snapshot to that `-data` topic. Polling the topic without `-data` only shows reset alerts, so it looks empty when no limit has reset. Reset times on the phone are shown in the phone’s local time.
 
-After a report arrives, the screen shows the percents, the reset times, and when the report was last updated. Pull down, or tap **Check now**, to read again. If the newest report is more than about 30 minutes old, the screen says the Mac may be asleep. The last numbers stay on screen.
+After a report arrives, the screen shows the percents, the reset times, and when the report was last updated. Pull down, or tap **Check now**, to read again. If the newest report is more than about 30 minutes old, the screen says the computer may be asleep. The last numbers stay on screen.
 
 A helper that is already installed does not need to be reinstalled for the phone to see these reports. It already publishes them to the `-data` topic, and ntfy.sh caches each one for about 12 hours. This copy of the helper also sends `Cache: yes`. Reinstall only if you want that explicit header.
 
@@ -48,7 +64,7 @@ These commands run on a computer, in this project folder. They upload the projec
 
 ### An APK you install yourself
 
-This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `4`.
+This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `5`.
 
 ```bash
 cd mobile
@@ -229,4 +245,4 @@ An Expo Starter plan is 19 USD per month. Get it only if that month’s 15 Andro
 
 The EAS project is already linked in `mobile/app.json` (`owner` `edcrypto`, project `claude-usage`). That project id is not a password. Do not put a Claude token, an ntfy topic, or a keystore password in the repo.
 
-The Android build command is `npm run build:android` in `mobile/`. `android.versionCode` is `4`.
+The Android preview APK command is `npm run build:android` in `mobile/`. The Play Store file is an Android App Bundle from `npm run build:play`, which uses the `production` profile in `mobile/eas.json` (`buildType` `app-bundle`). `android.versionCode` is `5`. The app version is `1.2.0`.

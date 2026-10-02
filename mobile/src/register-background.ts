@@ -1,9 +1,10 @@
+import { Platform } from 'react-native';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 
 export const USAGE_TASK = 'plan-pace-usage';
 
-TaskManager.defineTask(USAGE_TASK, async () => {
+if (Platform.OS !== 'web') TaskManager.defineTask(USAGE_TASK, async () => {
   try {
     const { runSync } = await import('./sync-runner');
     await runSync(true);
@@ -14,6 +15,7 @@ TaskManager.defineTask(USAGE_TASK, async () => {
 });
 
 export async function ensureBackground(): Promise<void> {
+  if (Platform.OS === 'web') return;
   try {
     const status = await BackgroundTask.getStatusAsync();
     if (status !== BackgroundTask.BackgroundTaskStatus.Available) return;
@@ -25,6 +27,7 @@ export async function ensureBackground(): Promise<void> {
 }
 
 export async function stopBackground(): Promise<void> {
+  if (Platform.OS === 'web') return;
   try {
     if (await TaskManager.isTaskRegisteredAsync(USAGE_TASK)) {
       await BackgroundTask.unregisterTaskAsync(USAGE_TASK);
