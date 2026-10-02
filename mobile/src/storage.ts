@@ -2,7 +2,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOPIC = 'claude-usage-topic';
 const SERVER = 'claude-usage-server';
+const RELAY = 'claude-usage-relay';
 const SEEN = 'claude-usage-seen';
+
+export type PhoneLink =
+  | { kind: 'ntfy'; topic: string; server: string }
+  | { kind: 'relay'; url: string; deviceId: string; key: string };
+
+export async function loadLink(): Promise<PhoneLink | null> {
+  const relay = await readJson<PhoneLink>(RELAY);
+  if (relay?.kind === 'relay' && relay.url && relay.deviceId && relay.key) return relay;
+  const settings = await loadSettings();
+  if (!settings.topic) return null;
+  return { kind: 'ntfy', topic: settings.topic, server: settings.server };
+}
+
+export async function saveLink(link: PhoneLink): Promise<void> {
+  if (link.kind === 'ntfy') {
+    await AsyncStorage.removeItem(RELAY);
+    await saveSettings(link.topic, link.server);
+    return;
+  }
+  await AsyncStorage.setItem(RELAY, JSON.stringify(link));
+  await saveSettings('', 'https://ntfy.sh');
+}
 
 export async function loadSettings(): Promise<{ topic: string; server: string }> {
   const [topic, server] = await Promise.all([
@@ -51,6 +74,7 @@ export type WidgetCache = {
   weeklyPercent: number | null;
   weeklyReset: string | null;
   fetchedAt: string | null;
+  recent: { t: string; session: number | null; weekly: number | null }[];
 };
 
 export const emptyWidget: WidgetCache = {
@@ -61,6 +85,7 @@ export const emptyWidget: WidgetCache = {
   weeklyPercent: null,
   weeklyReset: null,
   fetchedAt: null,
+  recent: [],
 };
 
 export async function loadWidgetCache(): Promise<WidgetCache> {
@@ -109,7 +134,7 @@ export async function saveSnapshot(snapshot: import('./model.ts').Snapshot): Pro
 }
 
 export async function clearPlanData(): Promise<void> {
-  await AsyncStorage.multiRemove([WIDGET, HISTORY, WINDOWS, SCHEDULED, SNAPSHOT]);
+  await AsyncStorage.multiRemove([WIDGET, HISTORY, WINDOWS, SCHEDULED, SNAPSHOT, RELAY, TOPIC, SERVER]);
 }
 
 async function readJson<T>(key: string): Promise<T | null> {

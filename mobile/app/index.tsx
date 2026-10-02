@@ -123,7 +123,7 @@ export default function HomeScreen() {
         />
         {Platform.OS === 'android' ? (
           <Text style={[styles.note, { color: colors.muted }]}>
-            Home screen widget: long-press the home screen, tap Widgets, and add Cluse.
+            Home screen widgets: long-press the home screen, tap Widgets, and add Cluse, Cluse session, or Cluse bars.
           </Text>
         ) : null}
         <Text style={[styles.note, { color: colors.muted }]}>

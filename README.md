@@ -64,7 +64,7 @@ These commands run on a computer, in this project folder. They upload the projec
 
 ### An APK you install yourself
 
-This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `6`.
+This replaces the APK already on the phone when `android.versionCode` in `mobile/app.json` is higher than the installed copy. It is already set to `7`.
 
 ```bash
 cd mobile
@@ -163,6 +163,10 @@ Open Cluse, wait until the meters appear, then add the widget again if it was ad
 **A new APK will not install over the old one.**  
 The package id must stay `com.eduardcummins.claudeusage`, and `android.versionCode` must be higher than the installed app. Do not delete the old app first if you want to keep the saved topic.
 
+## Encrypted relay
+
+New installs can pair with an encrypted relay. The computer encrypts each snapshot. The relay stores only ciphertext for about 12 hours. The phone decrypts it with the pairing code from the QR. The older `cu-` topic is still published for this release, so a phone that has not re-paired keeps working. Deploy steps and the one Cloudflare API token are in [docs/relay.md](docs/relay.md).
+
 ## Play Store
 
 The prepared answers are in [docs/play-console.md](docs/play-console.md). Two limits are worth knowing before you pay for a Play account:
@@ -245,4 +249,4 @@ An Expo Starter plan is 19 USD per month. Get it only if that month’s 15 Andro
 
 The EAS project is already linked in `mobile/app.json` (`owner` `edcrypto`, project `claude-usage`). That project id is not a password. Do not put a Claude token, an ntfy topic, or a keystore password in the repo.
 
-The Android preview APK command is `npm run build:android` in `mobile/`. The Play Store file is an Android App Bundle from `npm run build:play`, which uses the `production` profile in `mobile/eas.json` (`buildType` `app-bundle`). `android.versionCode` is `6`. The app version is `1.2.0`.
+The Android preview APK command is `npm run build:android` in `mobile/`. The Play Store file is an Android App Bundle from `npm run build:play`, which uses the `production` profile in `mobile/eas.json` (`buildType` `app-bundle`). `android.versionCode` is `7`. The app version is `1.2.0`.

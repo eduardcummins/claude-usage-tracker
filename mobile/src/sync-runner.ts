@@ -2,18 +2,20 @@ import { cancelResetAlarms, notifyLocal, syncResetAlarms } from './alerts';
 import { isValidTopic } from './model';
 import type { Snapshot } from './model';
 import { fetchLatestSnapshot, settingsFromInput } from './ntfy';
+import { decodePairing } from './pairing';
+import { fetchRelaySnapshot } from './relay';
 import { stopBackground } from './register-background';
 import {
   WidgetCache,
   clearPlanData,
   emptyWidget,
+  loadLink,
   loadScheduled,
-  loadSettings,
   loadSnapshot,
   loadWidgetCache,
   loadWindows,
+  saveLink,
   saveScheduled,
-  saveSettings,
   saveSnapshot,
   saveWidgetCache,
   saveWindows,
@@ -41,25 +43,30 @@ export function runSync(updateWidget = true): Promise<SyncOutcome> {
 }
 
 export async function saveTopic(raw: string): Promise<void> {
+  const pairing = decodePairing(raw);
+  if (pairing) {
+    await saveLink(pairing);
+    return;
+  }
   const settings = settingsFromInput(raw);
   if (!isValidTopic(settings.topic)) {
-    throw new Error('Paste the topic from the computer. It uses letters, numbers, hyphens, or underscores.');
+    throw new Error('Paste the pairing code, or a topic that uses letters, numbers, hyphens, or underscores.');
   }
-  await saveSettings(settings.topic, settings.server);
+  await saveLink({ kind: 'ntfy', topic: settings.topic, server: settings.server });
 }
 
 export async function forgetTopic(): Promise<void> {
   await stopBackground();
   await cancelResetAlarms();
-  await saveSettings('', 'https://ntfy.sh');
+  await saveLink({ kind: 'ntfy', topic: '', server: 'https://ntfy.sh' });
   await clearPlanData();
   await saveWidgetCache(emptyWidget);
   await pushWidget(emptyWidget);
 }
 
 async function runSyncOnce(updateWidget: boolean): Promise<SyncOutcome> {
-  const settings = await loadSettings();
-  if (!settings.topic) {
+  const link = await loadLink();
+  if (!link || (link.kind === 'ntfy' && !link.topic)) {
     return finish(emptyWidget, null, null, false, false, updateWidget);
   }
   const [previousWindows, scheduled, saved] = await Promise.all([
@@ -70,7 +77,10 @@ async function runSyncOnce(updateWidget: boolean): Promise<SyncOutcome> {
   let snapshot = saved;
   let error: string | null = null;
   try {
-    const latest = await fetchLatestSnapshot(fetch, settings.server, settings.topic);
+    const latest =
+      link.kind === 'relay'
+        ? await fetchRelaySnapshot(fetch, link)
+        : await fetchLatestSnapshot(fetch, link.server, link.topic);
     if (latest) {
       snapshot = latest;
       const alarms = planAlarms({

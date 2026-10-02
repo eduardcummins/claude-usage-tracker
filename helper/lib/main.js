@@ -7,7 +7,10 @@ import { ensureFreshCredentials, loadCredentials } from './credentials.js';
 import { UserError } from './errors.js';
 import { installMac, uninstallMac } from './install.js';
 import { dataTopic, publishNtfy } from './ntfy.js';
+import { encodePairing } from './pairing.js';
 import { writeTopicPage } from './qr.js';
+import { newKey } from './seal.js';
+import { pairRelay, publishRelay, relayBaseUrl } from './relay.js';
 import { fetchUsageResponse } from './oauth.js';
 import { formatPlan, parseUsageResponse } from './parse-usage.js';
 import { appPaths } from './paths.js';
@@ -116,33 +119,66 @@ export async function main(argv, deps = {}) {
 async function initConfig(deps, args) {
   const existing = await readConfig(deps.homeDir);
   if (existing && !args.rotate) {
-    printTopic(deps, existing);
+    const config = await ensureRelay(deps, existing);
+    if (config !== existing) await writeConfig(deps.homeDir, config);
+    await printTopic(deps, config);
     deps.log('Left the existing topic in place. To make a new one, run: node helper/cli.js --init --rotate');
     return 0;
   }
-  const config = {
+  const config = await ensureRelay(deps, {
     ntfyServer: 'https://ntfy.sh',
     ntfyTopic: newTopic(),
     timeZone: 'Europe/London',
-  };
+    relay: null,
+  });
   const file = await writeConfig(deps.homeDir, config);
   deps.log(`Saved ${file}`);
   await printTopic(deps, config);
   return 0;
 }
 
+async function ensureRelay(deps, config) {
+  if (config.relay) return config;
+  const url = relayBaseUrl(deps.env);
+  try {
+    const paired = await pairRelay(deps.fetch, url);
+    if (!paired) {
+      deps.log('The relay did not return a pairing. The phone can still use the ntfy topic.');
+      return config;
+    }
+    return { ...config, relay: { url, ...paired, key: newKey() } };
+  } catch {
+    deps.log('The relay is not reachable yet. The phone can still use the ntfy topic.');
+    return config;
+  }
+}
+
 async function printTopic(deps, config) {
-  const page = await writeTopicPage(deps.homeDir, config.ntfyTopic);
+  const pairing = config.relay
+    ? encodePairing({ url: config.relay.url, deviceId: config.relay.deviceId, key: config.relay.key })
+    : '';
+  const code = pairing || config.ntfyTopic;
+  const page = await writeTopicPage(deps.homeDir, code, pairing ? config.ntfyTopic : '');
   deps.log('');
+  if (pairing) {
+    deps.log('Pairing code:');
+    deps.log(pairing);
+    deps.log('');
+  }
   deps.log(`Phone topic: ${config.ntfyTopic}`);
   deps.log(`Usage updates are published to ${config.ntfyServer}/${dataTopic(config.ntfyTopic)}`);
   deps.log('');
   deps.log(page.terminal);
   deps.log('');
-  deps.log('On the phone, open Cluse, paste the phone topic, or scan the code above.');
+  deps.log('On the phone, open Cluse and scan the code above, or paste the pairing code.');
+  deps.log('A topic that starts with cu- still works until you pair.');
   deps.log(`A larger code is saved at ${page.file}`);
   deps.log('The ntfy app is not required.');
-  deps.log('Treat the topic like a password. Anyone who knows it can see usage percentages.');
+  if (pairing) {
+    deps.log('The pairing code is the only copy of the encryption key. The relay stores ciphertext.');
+  } else {
+    deps.log('Treat the topic like a password. Anyone who knows it can see usage percentages.');
+  }
 }
 
 async function sendTestAlert(deps) {
@@ -229,28 +265,48 @@ export async function runCheck(deps, args) {
     }
 
     const fitted = fitSnapshot(snapshot);
-    await publishNtfy({
-      server: config.ntfyServer,
-      topic: dataTopic(config.ntfyTopic),
-      title: fitted.windows.map((window) => `${window.shortLabel} ${window.usedPercent}%`).join(' · '),
-      message: JSON.stringify(fitted),
-      priority: 1,
-      tags: ['snapshot'],
-      token: config.ntfyToken,
-      fetch: deps.fetch,
-    });
-    if (alert) {
+    let relayOk = false;
+    let ntfyOk = false;
+    let relayError = null;
+    let ntfyError = null;
+    if (config.relay) {
+      try {
+        await publishRelay({ ...config.relay, snapshot: fitted, fetch: deps.fetch });
+        relayOk = true;
+      } catch (err) {
+        relayError = err;
+      }
+    }
+    try {
       await publishNtfy({
         server: config.ntfyServer,
-        topic: config.ntfyTopic,
-        title: alert.title,
-        message: alert.message,
-        priority: 5,
-        tags: ['reset'],
+        topic: dataTopic(config.ntfyTopic),
+        title: fitted.windows.map((window) => `${window.shortLabel} ${window.usedPercent}%`).join(' · '),
+        message: JSON.stringify(fitted),
+        priority: 1,
+        tags: ['snapshot'],
         token: config.ntfyToken,
         fetch: deps.fetch,
       });
+      if (alert) {
+        await publishNtfy({
+          server: config.ntfyServer,
+          topic: config.ntfyTopic,
+          title: alert.title,
+          message: alert.message,
+          priority: 5,
+          tags: ['reset'],
+          token: config.ntfyToken,
+          fetch: deps.fetch,
+        });
+      }
+      ntfyOk = true;
+    } catch (err) {
+      ntfyError = err;
     }
+    if (!relayOk && !ntfyOk) throw ntfyError || relayError || new UserError('The usage update was not sent.');
+    if (relayError) deps.log('The relay did not accept this update. The ntfy topic still received it.');
+    if (ntfyError && relayOk) deps.log('The ntfy topic did not accept this update. The encrypted relay still received it.');
 
     const notified = { ...state.notifiedResets };
     for (const window of alerts) notified[window.id] = window.resetsAt;

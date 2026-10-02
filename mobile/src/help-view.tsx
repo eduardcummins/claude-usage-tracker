@@ -4,7 +4,7 @@ import { bodyFont, displayFont, Palette } from './theme';
 const ITEMS = [
   {
     title: 'What the phone stores',
-    body: 'The topic you paste, the latest percentages, and the reset alarms. There is no Claude login on this phone. Chats and files are not read.',
+    body: 'The pairing code or older topic you paste, the latest percentages, and the reset alarms. There is no Claude login on this phone. Chats and files are not read.',
   },
   {
     title: 'The install command failed',
@@ -20,7 +20,7 @@ const ITEMS = [
   },
   {
     title: 'I pasted the topic and the meters stayed empty',
-    body: 'Paste the phone topic, not a longer address, unless the address is the ntfy link the helper printed. A topic ending in -data is accepted. The app reads the usage messages itself.',
+    body: 'Paste the pairing code the helper printed, or an older topic that starts with cu-. A topic ending in -data is accepted. The app reads the report itself.',
   },
   {
     title: 'A reset time passed and the phone stayed quiet',
@@ -45,7 +45,7 @@ export function HelpBody({ colors, onBack }: { colors: Palette; onBack: () => vo
       </Pressable>
       <Text style={styles.title}>Help</Text>
       <Text style={styles.lede}>
-        Cluse reads a usage report from your own computer. It does not sign in to Claude on this phone.
+        Cluse reads a usage report from your own computer. A pairing code keeps that report encrypted. A topic that starts with cu- still works. The phone does not sign in to Claude.
       </Text>
       {ITEMS.map((item) => (
         <View key={item.title} style={styles.card}>

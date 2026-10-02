@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw Cluse icons. The mark is an original gauge, not the Claude logo."""
+"""Draw Cluse icons. The mark is a segmented C, not the Claude logo."""
 
 import math
 import struct
@@ -58,18 +58,44 @@ def fill_rect(buf, w, h, x0, y0, x1, y1, color):
             put(buf, w, h, x, y, color)
 
 
-def ring(buf, w, h, cx, cy, inner, outer, color, sweep=300):
-    start = -math.pi / 2
-    span = math.radians(sweep)
+def disc(buf, w, h, cx, cy, radius, color):
+    r2 = radius * radius
+    x0 = max(0, int(cx - radius - 1))
+    x1 = min(w, int(cx + radius + 2))
+    y0 = max(0, int(cy - radius - 1))
+    y1 = min(h, int(cy + radius + 2))
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            if (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r2:
+                put(buf, w, h, x, y, color)
+
+
+def round_rect(buf, w, h, radius, color):
     for y in range(h):
         for x in range(w):
-            dx = x + 0.5 - cx
-            dy = y + 0.5 - cy
-            dist = math.hypot(dx, dy)
-            if inner <= dist <= outer:
-                angle = (math.atan2(dy, dx) - start) % (math.pi * 2)
-                if angle <= span:
-                    put(buf, w, h, x, y, color)
+            dx = 0
+            dy = 0
+            if x < radius:
+                dx = radius - x - 0.5
+            elif x >= w - radius:
+                dx = x + 0.5 - (w - radius)
+            if y < radius:
+                dy = radius - y - 0.5
+            elif y >= h - radius:
+                dy = y + 0.5 - (h - radius)
+            if dx * dx + dy * dy <= radius * radius:
+                put(buf, w, h, x, y, color)
+
+
+def mark(buf, w, h, cx, cy, radius, bead, color, count=14):
+    start = math.radians(40)
+    sweep = math.radians(280)
+    for i in range(count):
+        angle = start + sweep * i / (count - 1)
+        x = cx + radius * math.cos(angle)
+        y = cy - radius * math.sin(angle)
+        size = bead * 1.7 if i == count - 1 else bead
+        disc(buf, w, h, x, y, size, color)
 
 
 def text(buf, w, h, x, y, message, color, scale=4):
@@ -106,12 +132,13 @@ def write_png(path, w, h, buf):
 
 def main():
     ROOT.mkdir(parents=True, exist_ok=True)
-    icon = blank(1024, 1024, CREAM)
-    ring(icon, 1024, 1024, 512, 512, 280, 390, TERRACOTTA)
+    icon = blank(1024, 1024, CLEAR)
+    round_rect(icon, 1024, 1024, 220, CREAM)
+    mark(icon, 1024, 1024, 512, 512, 250, 34, TERRACOTTA)
     write_png(ROOT / "icon.png", 1024, 1024, icon)
 
     foreground = blank(1024, 1024, CLEAR)
-    ring(foreground, 1024, 1024, 512, 512, 210, 300, TERRACOTTA)
+    mark(foreground, 1024, 1024, 512, 512, 230, 32, TERRACOTTA)
     write_png(ROOT / "android-icon-foreground.png", 1024, 1024, foreground)
     write_png(ROOT / "splash-icon.png", 1024, 1024, foreground)
 
@@ -119,22 +146,29 @@ def main():
     write_png(ROOT / "android-icon-background.png", 1024, 1024, background)
 
     mono = blank(1024, 1024, CLEAR)
-    ring(mono, 1024, 1024, 512, 512, 210, 300, WHITE)
+    mark(mono, 1024, 1024, 512, 512, 230, 32, WHITE)
     write_png(ROOT / "android-icon-monochrome.png", 1024, 1024, mono)
 
     favicon = blank(48, 48, CREAM)
-    ring(favicon, 48, 48, 24, 24, 12, 18, TERRACOTTA)
+    mark(favicon, 48, 48, 24, 24, 12, 1.8, TERRACOTTA, 10)
     write_png(ROOT / "favicon.png", 48, 48, favicon)
+    feature_graphic()
 
-    preview = blank(800, 360, CREAM)
-    text(preview, 800, 360, 36, 28, "Cluse", MUTED, 4)
-    text(preview, 800, 360, 36, 120, "5-hour", INK, 5)
-    text(preview, 800, 360, 36, 168, "resets in 3h", MUTED, 3)
-    text(preview, 800, 360, 620, 116, "72%", TERRACOTTA, 6)
-    text(preview, 800, 360, 36, 230, "Weekly", INK, 5)
-    text(preview, 800, 360, 36, 278, "resets in 4d", MUTED, 3)
-    text(preview, 800, 360, 620, 226, "18%", TERRACOTTA, 6)
-    write_png(ROOT / "widget-preview.png", 800, 360, preview)
+
+def feature_graphic():
+    from PIL import Image, ImageDraw, ImageFont
+
+    canvas = Image.new("RGB", (1024, 500), (250, 249, 245))
+    mark_image = Image.open(ROOT / "android-icon-foreground.png").convert("RGBA")
+    mark_image = mark_image.resize((420, 420), Image.Resampling.LANCZOS)
+    canvas.paste(mark_image, (48, 40), mark_image)
+    draw = ImageDraw.Draw(canvas)
+    title = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", 92)
+    tag = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", 28)
+    draw.text((500, 170), "Cluse", font=title, fill=(20, 20, 19))
+    draw.text((504, 290), "Session and weekly plan usage", font=tag, fill=(107, 106, 100))
+    out = ROOT.parents[1] / "docs" / "play" / "feature-graphic.png"
+    canvas.save(out)
 
 
 if __name__ == "__main__":

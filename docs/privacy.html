@@ -35,10 +35,16 @@
 
     <h2>What is sent off the phone</h2>
     <p>
-      The phone does not sign in to Claude. A helper on your computer reads the plan with the Claude Code login already on that computer, and publishes a usage report to your ntfy topic.
+      The phone does not sign in to Claude. A helper on your computer reads the plan with the Claude Code login already on that computer.
     </p>
     <p>
-      To show the meters, the app requests the latest cached report from your topic on
+      If you scan or paste a pairing code, the computer encrypts the usage report before sending it.
+      The encryption key is in that code. It is not sent to the relay.
+      The relay stores only the encrypted report, keeps the latest one for about 12 hours, and then deletes it.
+      The person who runs the relay cannot read the percentages.
+    </p>
+    <p>
+      A topic that starts with cu- still works. For that older path, the app requests the latest cached report from
       <a href="https://ntfy.sh">ntfy.sh</a> (or another ntfy server, if you pasted a URL for one).
       That request uses HTTPS. Anyone who knows the topic can read the same percentages.
       The app does not send the usage numbers to the person who published Cluse.

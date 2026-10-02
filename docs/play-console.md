@@ -57,15 +57,16 @@ The same folder also has `phone-topic.png`, `phone-stale.png`, `phone-waiting.pn
 
 Home screen widget renders, light and dark, with the marker on each bar:
 
-- `widget-250x140-light.png` and `widget-250x140-dark.png` — the smallest size, 250×140 dp.
-- `widget-320x140-light.png` and `widget-320x140-dark.png` — a common 4×2 size. `widget-card.png` is the light copy.
-- `widget-420x180-light.png` and `widget-420x180-dark.png` — a wider, taller size.
+- `widget-rings-light.png` and `widget-rings-dark.png` — the wide 4×2 rings, recent checks, and Check now button. `widget-card.png` is the light copy.
+- `widget-compact-light.png` and `widget-compact-dark.png` — the 2×2 session widget.
+- `widget-bars-light.png` and `widget-bars-dark.png` — the older bar layout, still offered as Cluse bars.
+- `widget-250x140-light.png`, `widget-320x140-light.png`, and `widget-420x180-light.png`, with dark copies — the wide rings at a few home-screen sizes.
 
 Each file is the widget at 3× with a margin so the rounded corners are visible. The Android widget picker image is `mobile/assets/widget-preview.png`.
 
 Leave the words Claude and Anthropic out of the images except where the in-app footer already says the app is not affiliated. Crop above that line if a screenshot must avoid the name.
 
-Feature graphic: `docs/play/feature-graphic.png`, 1024×500, cream background (`#faf9f5`), the terracotta gauge, and the words “Cluse”.
+Feature graphic: `docs/play/feature-graphic.png`, 1024×500, cream background (`#faf9f5`), the terracotta segmented C, and the word “Cluse”.
 
 ## Data safety form
 
@@ -73,7 +74,7 @@ Answer from what the app actually does.
 
 | Question | Answer |
 | --- | --- |
-| Does the app collect or share any of the required user data types? | The phone stores the ntfy topic the user pastes and the usage percentages it reads from that topic. Those requests go to ntfy.sh (or the server in a pasted URL). The developer does not receive them. The phone does not send a Claude login. The camera is optional and is used only to scan a QR code; images are not stored or uploaded. |
+| Does the app collect or share any of the required user data types? | The phone stores the pairing code or older ntfy topic the user pastes, and the usage percentages it decrypts or reads. A pairing code sends the phone to the Cluse relay, which stores only ciphertext for about 12 hours. The relay operator cannot read the percentages. An older cu- topic is read from ntfy.sh (or the server in a pasted URL), where anyone with the topic can see the percentages. The developer does not receive a readable copy. The phone does not send a Claude login. The camera is optional and is used only to scan a QR code; images are not stored or uploaded. |
 | Is all of the data collected by your app encrypted in transit? | Yes. The requests use HTTPS. |
 | Do you provide a way for users to request that their data be deleted? | Yes. Remove topic in the app deletes the topic and the saved usage from the phone. Uninstalling deletes the rest. There is no Cluse account. The Claude account is deleted on claude.ai, which the privacy policy states. |
 | Location | No. |
@@ -83,7 +84,7 @@ Answer from what the app actually does.
 | Messages, photos, audio, files, contacts, calendar | No. |
 | App activity | Usage percentages and reset times are stored on the device and read from the user’s ntfy topic. They are not sent to the developer. |
 | Device or other IDs | No. |
-| Data shared with third parties | The phone requests the cached usage message from the ntfy server the user chose (normally ntfy.sh). It is not sold and it is not used for advertising. |
+| Data shared with third parties | With a pairing code, the phone requests an encrypted blob from the Cluse relay. The relay cannot read it. With an older cu- topic, the phone requests the cached usage message from the ntfy server the user chose (normally ntfy.sh). It is not sold and it is not used for advertising. |
 
 If the form’s “account deletion” link is required, use the privacy policy URL. The policy explains removing the topic in the app and points Claude account deletion to claude.ai.
 
@@ -106,7 +107,7 @@ Blocked on purpose: overlay windows (`SYSTEM_ALERT_WINDOW`), storage, photos, vi
 
 ## Version already set for the next install
 
-`mobile/app.json` is version `1.2.0`, Android `versionCode` 6, iOS build number `2`. `versionCode` 6 is higher than the copy already installed, so the new package can replace it.
+`mobile/app.json` is version `1.2.0`, Android `versionCode` 7, iOS build number `2`. `versionCode` 7 is higher than the copy already installed, so the new package can replace it.
 
 The Play upload is an Android App Bundle, not an APK. From `mobile`:
 
